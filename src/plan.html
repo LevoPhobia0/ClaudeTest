@@ -50,7 +50,7 @@ out center tags;</pre>
       <div class="card"><h3>📍 En yakın kort + yol tarifi</h3>Tarayıcının konum izniyle en yakın kortlar sıralanır. Rota çizilir (OSRM), süre ve mesafe gösterilir. Tek tıkla Google Maps / Apple Maps / Yandex'te yol tarifi açılır.</div>
       <div class="card"><h3>💸 Ücret bilgisi</h3>Biliniyorsa saatlik ücret, gündüz/akşam farkı ve MultiSport geçerliliği. Bilinmiyorsa "bilinmiyor" yazar. Her bilginin kaynağı ve son doğrulama tarihi gösterilir.</div>
       <div class="card"><h3>💬 Yorum ve puan</h3>Üyelik yok: takma ad, 1–5 yıldız ve yorum yeterli. Spama karşı hız sınırı ve captcha var, moderasyon kuyruğu tutulur.</div>
-      <div class="card"><h3>🎾 "Temiiiis!"</h3>Her korta tıklayınca coşkulu bir "Temiiiis!" sesi, top sesi ve tribün alkışı çalar. Ekranda ayrıca bir animasyon çıkar. Sağ üstteki düğmeden kapatılabilir.</div>
+      <div class="card"><h3>🎾 "Teniiiis!"</h3>Her korta tıklayınca coşkulu bir "Teniiiis!" sesi, top sesi ve tribün alkışı çalar. Ekranda ayrıca bir animasyon çıkar. Sağ üstteki düğmeden kapatılabilir.</div>
       <div class="card"><h3>🚩 Bilgi düzeltme</h3>"Bu bilgi yanlış" ve "Ücreti ben biliyorum" formları var. Kitle kaynaklı güncellemeler moderasyondan sonra yayınlanır.</div>
     </div>
     <p><b>Kapsam dışı (şimdilik):</b> üyelik ve giriş, rezervasyon ve ödeme, kulüp paneli.</p>
@@ -81,7 +81,7 @@ Duzeltme (suggestion)
       <tr><td>Arka uç ve veritabanı</td><td>Supabase (Postgres + PostGIS + Edge Functions)</td><td>Yakınlık sorgusu (<code>ST_DWithin</code>), yorumlar ve moderasyon. Üyelik eklendiğinde Auth hazır.</td></tr>
       <tr><td>Veri toplama</td><td>Gece çalışan bir işlem: Overpass → normalize → kümele → "inceleme bekliyor" kuyruğu</td><td>Yeni kortlar otomatik yakalanır, elle doğrulanmış alanlar ezilmez.</td></tr>
       <tr><td>Yol tarifi</td><td>Google Maps deep link + OSRM / OpenRouteService rota çizimi</td><td>Ücretsiz. Navigasyonun asıl işini kullanıcının harita uygulaması yapar.</td></tr>
-      <tr><td>Ses</td><td>Web Speech API (tr-TR) + Web Audio sentez → ileride stüdyoda kaydedilmiş bir "Temiiiis!" mp3</td><td>Demo dosya gerektirmez. Üründe kayıtlı ses daha eğlenceli ve tutarlı olur.</td></tr>
+      <tr><td>Ses</td><td>Web Speech API (tr-TR) + Web Audio sentez → ileride stüdyoda kaydedilmiş bir "Teniiiis!" mp3</td><td>Demo dosya gerektirmez. Üründe kayıtlı ses daha eğlenceli ve tutarlı olur.</td></tr>
     </table>
 
     <h2>5. Yol haritası</h2>
@@ -89,7 +89,7 @@ Duzeltme (suggestion)
       <div class="card"><span class="phase">Faz 0 · 1 hafta</span><h3>Veri toplama</h3>
         <ul><li>Overpass ile toplu çekim ve temizlik</li><li>MultiSport, TTF ve üniversite listelerinin birleştirilmesi</li><li>Her tesisin aranarak ücret ve açık/kapalı bilgisinin doğrulanması</li><li>Belediyelere bilgi edinme başvurusu</li></ul></div>
       <div class="card"><span class="phase">Faz 1 · 2–3 hafta</span><h3>MVP</h3>
-        <ul><li>Harita, liste ve filtreler</li><li>En yakın kort, rota ve yol tarifi</li><li>Detay sayfası ve ücret alanı</li><li>"Temiiiis!" sesi 🎾</li></ul></div>
+        <ul><li>Harita, liste ve filtreler</li><li>En yakın kort, rota ve yol tarifi</li><li>Detay sayfası ve ücret alanı</li><li>"Teniiiis!" sesi 🎾</li></ul></div>
       <div class="card"><span class="phase">Faz 2 · 2 hafta</span><h3>Topluluk</h3>
         <ul><li>Üyeliksiz yorum ve puan (sunucu tarafında)</li><li>Spam koruması ve moderasyon paneli</li><li>"Bilgi yanlış" / "Ücreti biliyorum" formları</li></ul></div>
       <div class="card"><span class="phase">Faz 3 · sonrası</span><h3>Büyüme</h3>

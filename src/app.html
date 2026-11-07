@@ -125,7 +125,7 @@
   #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#1b2420;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%;text-align:center}
   #toast.on{opacity:1}
 
-  /* TEMİİİS efekti */
+  /* TENİİİS efekti */
   #temis{position:fixed;left:50%;top:38%;z-index:9998;pointer-events:none;font-weight:900;font-size:clamp(42px,13vw,110px);color:var(--ball);
     -webkit-text-stroke:3px var(--green-d);text-shadow:0 6px 0 var(--green-d),0 12px 30px rgba(0,0,0,.35);opacity:0;white-space:nowrap;font-style:italic;transform:translate(-50%,-50%)}
   #temis.go{animation:temis 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
@@ -229,7 +229,7 @@
   </section>
 </main>
 
-<div id="temis">TEMİİİİS! 🎾</div>
+<div id="temis">TENİİİİS! 🎾</div>
 <div id="toast"></div>
 
 <script>
@@ -560,7 +560,7 @@ function refreshOpenDetail(){
 }
 
 /* =========================================================
-   🎾 TEMİİİİS! — konuşma sentezi + top sesi + tribün alkışı
+   🎾 TENİİİİS! — konuşma sentezi + top sesi + tribün alkışı
    ========================================================= */
 let actx=null;
 function ctx(){ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume(); return actx; }
@@ -571,7 +571,7 @@ function crowd(t0){const a=ctx(),src=a.createBufferSource();src.buffer=noiseBuf(
   const g=a.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.35,t0+.35);g.gain.linearRampToValueAtTime(.25,t0+1.2);g.gain.linearRampToValueAtTime(0,t0+2.1);
   const lfo=a.createOscillator(),lg=a.createGain();lfo.frequency.value=13;lg.gain.value=.12;lfo.connect(lg).connect(g.gain);
   src.connect(bp).connect(g).connect(a.destination);src.start(t0);lfo.start(t0);lfo.stop(t0+2.2);}
-function synthTemis(t0){ // Türkçe ses yoksa: "te-miiiiis" benzeri sentez
+function synthTemis(t0){ // Türkçe ses yoksa: "te-niiiiis" benzeri sentez
   const a=ctx(),out=a.createGain();out.gain.value=.28;out.connect(a.destination);
   const f1=a.createBiquadFilter();f1.type="bandpass";f1.Q.value=4;const f2=a.createBiquadFilter();f2.type="bandpass";f2.Q.value=6;
   const o=a.createOscillator();o.type="sawtooth";const vib=a.createOscillator(),vg=a.createGain();vib.frequency.value=6;vg.gain.value=12;vib.connect(vg).connect(o.frequency);
@@ -585,7 +585,7 @@ function speakTemis(){
   try{
     if(!("speechSynthesis" in window)) return false;
     const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith("tr")); if(!v) return false;
-    const u=new SpeechSynthesisUtterance("Temiiiiiiiiis!"); u.voice=v; u.lang="tr-TR"; u.pitch=1.9; u.rate=.85; u.volume=1;
+    const u=new SpeechSynthesisUtterance("Teniiiiiiiiis!"); u.voice=v; u.lang="tr-TR"; u.pitch=1.9; u.rate=.85; u.volume=1;
     speechSynthesis.cancel(); speechSynthesis.speak(u); return true;
   }catch(e){ return false; }
 }

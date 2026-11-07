@@ -4,7 +4,7 @@ Ankara'daki tenis kortlarını harita üzerinde gösteren uygulama fikrinin **pl
 
 `index.html` tek dosyadır ve **hiçbir dış kaynak yüklemez**. Bu yüzden telefonda ve Claude uygulamasının içinde de çalışır.
 
-- **🗺️ Harita:** 22 tesislik çekirdek liste var. Filtreler: açık, kapalı, karma ve ücret türü. Ayrıca konum seçme (semt, haritaya dokunma ya da cihaz konumu), en yakın kort ve mesafe, Google Maps veya Apple Haritalar'da yol tarifi, yıldızlı yorumlar ve her tıklamada "Temiiiis!" sesi.
+- **🗺️ Harita:** 22 tesislik çekirdek liste var. Filtreler: açık, kapalı, karma ve ücret türü. Ayrıca konum seçme (semt, haritaya dokunma ya da cihaz konumu), en yakın kort ve mesafe, Google Maps veya Apple Haritalar'da yol tarifi, yıldızlı yorumlar ve her tıklamada "Teniiiis!" sesi.
 - **📋 Plan:** veri kaynakları araştırması, veri modeli, mimari, yol haritası ve riskler.
 
 ## Dosyalar
