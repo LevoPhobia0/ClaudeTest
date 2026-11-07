@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>KortBul Ankara · Tenis Kortu Haritası</title>
+<style>
+/*@LEAFLET_CSS@*/
+</style>
+<style>
+  :root{--green:#1f7a3a;--green-d:#145a29;--ball:#d7f53b;--blue:#2563eb;--purple:#8b5cf6;--gray:#6b7280;
+    --bg:#f5f7f2;--card:#fff;--text:#1b2420;--muted:#5d6b63;--line:#e3e8e1}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--bg);overscroll-behavior:none}
+  body{display:flex;flex-direction:column}
+  button{font:inherit;color:inherit}
+  header{flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(90deg,var(--green-d),var(--green));color:#fff}
+  .logo{font-weight:800;font-size:17px;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .ball{width:22px;height:22px;border-radius:50%;background:var(--ball);position:relative;flex:none;box-shadow:inset -3px -3px 0 rgba(0,0,0,.12)}
+  .ball:after{content:"";position:absolute;inset:3px;border:2px solid #fff;border-left-color:transparent;border-right-color:transparent;border-radius:50%}
+  .tabs{display:flex;gap:5px;margin-left:auto}
+  .tab{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 11px;border-radius:999px;cursor:pointer;font-weight:700;font-size:13px}
+  .tab.active{background:var(--ball);color:#1b2420;border-color:var(--ball)}
+  .tab.icon{padding:7px 10px}
+  main{flex:1;position:relative;min-height:0}
+  .view{position:absolute;inset:0}
+
+  /* ---------- HARİTA ---------- */
+  #map{position:absolute;inset:0;background:#ece9df}
+  .leaflet-container{font:inherit;background:#ece9df}
+  .topbar{position:absolute;top:8px;left:8px;right:8px;z-index:1000;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+  .topbar > *{pointer-events:auto}
+  .search{display:flex;gap:6px}
+  .search input{flex:1;min-width:0;padding:11px 13px;border:0;border-radius:12px;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.15);outline:none}
+  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 1px 4px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:0;background:#fff;border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.15);white-space:nowrap}
+  .chip.on{background:var(--green);color:#fff}
+  .chip.sep{background:transparent;box-shadow:none;padding:0 2px;color:#999}
+
+  .fab{position:absolute;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px;bottom:calc(var(--sheet-h,150px) + 12px);transition:bottom .25s}
+  .fab button{border:0;border-radius:999px;padding:12px 15px;font-weight:800;font-size:14px;box-shadow:0 3px 12px rgba(0,0,0,.25);cursor:pointer}
+  .fab .near{background:var(--green);color:#fff}
+  .fab .loc{background:#fff}
+
+  /* Alt liste paneli */
+  #sheet{position:absolute;left:0;right:0;bottom:0;z-index:1050;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.15);
+    height:var(--sheet-h,150px);transition:height .25s;display:flex;flex-direction:column}
+  .handle{flex:none;padding:8px 14px 6px;cursor:pointer;user-select:none}
+  .handle:before{content:"";display:block;width:42px;height:5px;border-radius:9px;background:#d5dbd3;margin:0 auto 7px}
+  .handle .sum{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+  .handle .sum b{color:var(--text);font-size:15px}
+  #list{flex:1;overflow:auto;padding:4px 10px 14px;-webkit-overflow-scrolling:touch}
+  .item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:13px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .item:active{background:#f3f7f1}
+  .item.sel{border-color:var(--green);box-shadow:0 0 0 2px rgba(31,122,58,.18)}
+  .item .dot{flex:none;width:30px;height:30px}
+  .item .body{flex:1;min-width:0}
+  .item h4{margin:0 0 4px;font-size:14.5px;line-height:1.25}
+  .item .dist{flex:none;font-weight:800;color:var(--green);font-size:13px;padding-top:2px}
+  .meta{display:flex;flex-wrap:wrap;gap:4px;font-size:11.5px}
+  .tag{padding:2px 7px;border-radius:999px;background:#eef3ec;color:#2b3a31;white-space:nowrap}
+  .t-acik{background:#dcfce7;color:#14532d}.t-kapali{background:#dbeafe;color:#1e3a8a}.t-karma{background:#ede9fe;color:#4c1d95}.t-bilinmiyor{background:#f3f4f6;color:#374151}
+  .f-ucretsiz{background:#d1fae5;color:#065f46}.f-ucretli{background:#fee2e2;color:#7f1d1d}.f-uyelik{background:#fef3c7;color:#78350f}.f-bilinmiyor{background:#f3f4f6;color:#374151}
+  .warn{background:#fff7ed;color:#9a3412}
+
+  /* Harita işaretleri */
+  .pin{width:30px;height:30px;border-radius:50%;background:var(--ball);border:4px solid var(--c,#1f7a3a);box-shadow:0 2px 6px rgba(0,0,0,.4);position:relative;overflow:hidden}
+  .pin:after{content:"";position:absolute;width:26px;height:26px;left:-12px;top:-2px;border:2px solid #fff;border-radius:50%}
+  .pin:before{content:"";position:absolute;width:26px;height:26px;right:-12px;top:-2px;border:2px solid #fff;border-radius:50%}
+  .pin.plan{background:#e5e7eb;border-style:dashed}
+  .pin.sel{transform:scale(1.3);box-shadow:0 0 0 5px rgba(215,245,59,.6),0 3px 10px rgba(0,0,0,.4)}
+  .me{width:20px;height:20px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 8px rgba(37,99,235,.25)}
+  .lbl{white-space:nowrap;font-weight:800;color:#8a8574;font-size:12px;letter-spacing:.5px;text-transform:uppercase;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%);pointer-events:none;position:absolute}
+  .lbl-s{text-transform:none;letter-spacing:0;font-weight:600;color:#6b6656;font-size:11px;display:none}
+  .lbl-w{text-transform:none;letter-spacing:0;color:#3b82c4;font-style:italic;font-size:11px}
+  .z12 .lbl-s{display:block}
+  .z12 .lbl-d{opacity:.5}
+  .leaflet-control-attribution{font-size:9px}
+  .leaflet-bottom{bottom:var(--sheet-h,150px);transition:bottom .25s}
+  @media (max-width:899px){.leaflet-control-zoom{display:none}}
+  #locOv .panel{max-height:86%}
+
+  /* Detay paneli */
+  .overlay{position:absolute;inset:0;z-index:1100;background:rgba(0,0,0,.25);display:none}
+  .overlay.open{display:block}
+  .panel{position:absolute;left:0;right:0;bottom:0;max-height:64%;background:#fff;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:up .25s ease}
+  @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+  .d-head{padding:14px 16px 12px;background:linear-gradient(135deg,var(--green),#2f9e52);color:#fff;position:relative;flex:none}
+  .d-head h3{margin:0 40px 6px 0;font-size:18px;line-height:1.25}
+  .close{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.22);border:0;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:17px}
+  .d-body{padding:14px 16px 26px;overflow:auto;-webkit-overflow-scrolling:touch}
+  .price{background:#f7fee7;border:1px dashed #a3e635;border-radius:11px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+  .kv{display:grid;grid-template-columns:96px 1fr;gap:6px 10px;font-size:14px;margin-bottom:12px}
+  .kv b{color:var(--muted);font-weight:600}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{display:block;text-align:center;text-decoration:none;border:0;border-radius:12px;padding:12px;font-weight:800;cursor:pointer;font-size:14px}
+  .btn-primary{background:var(--green);color:#fff}
+  .btn-ball{background:var(--ball);color:#1b2420}
+  .btn-ghost{background:#eef3ec;color:var(--text)}
+  .btn.wide{grid-column:1/-1}
+  .route-info{background:#eff6ff;border-radius:11px;padding:10px 12px;font-size:14px;margin:10px 0}
+  .src{font-size:12px;color:var(--muted)}
+  .src a{color:var(--green)}
+  .section-t{font-weight:800;margin:18px 0 8px;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .mode{font-size:11px;font-weight:600;background:#eef3ec;border-radius:999px;padding:3px 8px;color:var(--muted)}
+  .stars{display:flex;gap:4px;font-size:30px;cursor:pointer;user-select:none}
+  .stars span{color:#d1d5db}.stars span.on{color:#f59e0b}
+  .d-body input[type=text],textarea{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;font:inherit;font-size:15px}
+  textarea{min-height:80px;resize:vertical}
+  .msg{font-size:13px;margin-top:6px;min-height:1em}
+  .msg.err{color:#b91c1c}.msg.ok{color:#15803d}
+  .comment{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+  .comment .who{font-weight:800}.comment .when{color:var(--muted);font-size:11.5px;margin-left:6px}
+  .comment .mine{font-size:11px;background:#fef9c3;border-radius:999px;padding:1px 7px;margin-left:6px}
+
+  /* Konum seçici */
+  .locgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:7px;margin-top:10px}
+  .locgrid button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 6px;font-size:13px;cursor:pointer}
+  .locgrid button:active{background:#eef3ec}
+  .pickhint{position:absolute;top:110px;left:50%;transform:translateX(-50%);z-index:1000;background:#1b2420;color:#fff;padding:10px 14px;border-radius:999px;font-size:13.5px;font-weight:700;display:none;box-shadow:0 3px 12px rgba(0,0,0,.3);white-space:nowrap}
+  .pickhint.on{display:block}
+
+  /* Bildirim */
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#1b2420;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%;text-align:center}
+  #toast.on{opacity:1}
+
+  /* TEMİİİS efekti */
+  #temis{position:fixed;left:50%;top:38%;z-index:9998;pointer-events:none;font-weight:900;font-size:clamp(42px,13vw,110px);color:var(--ball);
+    -webkit-text-stroke:3px var(--green-d);text-shadow:0 6px 0 var(--green-d),0 12px 30px rgba(0,0,0,.35);opacity:0;white-space:nowrap;font-style:italic;transform:translate(-50%,-50%)}
+  #temis.go{animation:temis 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+  @keyframes temis{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-12deg)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.12) rotate(4deg)}35%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1.05)}}
+  .ballfly{position:fixed;left:0;top:0;z-index:9997;width:34px;height:34px;border-radius:50%;background:var(--ball);box-shadow:inset -6px -5px 0 rgba(0,0,0,.15);pointer-events:none}
+
+  /* ---------- PLAN ---------- */
+  #view-plan{display:none;overflow:auto;-webkit-overflow-scrolling:touch}
+  .plan{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+  .plan h1{font-size:24px;margin:0 0 6px}
+  .plan h2{font-size:19px;margin:30px 0 10px;padding-bottom:5px;border-bottom:3px solid var(--ball);display:inline-block}
+  .plan h3{font-size:16px;margin:16px 0 6px}
+  .plan p,.plan li{line-height:1.6;font-size:15px}
+  .callout{background:#fff;border-left:5px solid var(--green);border-radius:10px;padding:13px 15px;margin:12px 0;box-shadow:0 1px 6px rgba(0,0,0,.05);line-height:1.55;font-size:15px}
+  .callout.warn{border-left-color:#f59e0b;background:#fffbeb;color:inherit}
+  .plan table{border-collapse:collapse;width:100%;background:#fff;font-size:13.5px;margin:10px 0;display:block;overflow-x:auto}
+  .plan th,.plan td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;min-width:110px}
+  .plan th{background:#eef3ec;font-size:12.5px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+  .card{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,.05);line-height:1.55}
+  .card h3{margin-top:0}
+  .phase{display:inline-block;background:var(--green);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-bottom:6px}
+  .plan code,.plan pre{background:#1b2420;color:#d7f53b;border-radius:7px;font-size:12px}
+  .plan code{padding:1px 5px}
+  .plan pre{padding:12px 14px;overflow:auto;line-height:1.5}
+  .ok{color:#15803d;font-weight:700}.no{color:#b91c1c;font-weight:700}.mid{color:#b45309;font-weight:700}
+
+  /* Geniş ekran: liste solda, detay sağda */
+  @media (min-width:900px){
+    #map{left:380px}
+    .topbar{left:392px;right:auto;width:min(620px,calc(100% - 410px))}
+    #sheet{top:0;right:auto;width:380px;height:auto!important;border-radius:0;box-shadow:2px 0 10px rgba(0,0,0,.08)}
+    .handle{cursor:default}.handle:before{display:none}
+    .fab{bottom:24px!important}
+    .leaflet-bottom{bottom:0}
+    .overlay{background:transparent;pointer-events:none;left:380px}
+    .panel{pointer-events:auto;left:auto;right:12px;top:12px;bottom:12px;width:400px;max-height:none;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="ball"></span>KortBul<span style="font-weight:500;opacity:.85">Ankara</span></div>
+  <div class="tabs">
+    <button class="tab active" data-view="map">🗺️ Harita</button>
+    <button class="tab" data-view="plan">📋 Plan</button>
+    <button class="tab icon" id="soundBtn" aria-label="Sesi aç/kapat">🔊</button>
+  </div>
+</header>
+
+<main>
+  <section class="view" id="view-map">
+    <div id="map"></div>
+
+    <div class="topbar">
+      <div class="search"><input type="search" id="q" placeholder="🔎 Kort, kulüp veya semt ara…" autocomplete="off"></div>
+      <div class="chips" id="chips">
+        <button class="chip on" data-k="tur" data-v="hepsi">Tümü</button>
+        <button class="chip" data-k="tur" data-v="acik">☀️ Açık</button>
+        <button class="chip" data-k="tur" data-v="kapali">🏠 Kapalı</button>
+        <button class="chip" data-k="tur" data-v="karma">🔀 Açık+Kapalı</button>
+        <span class="chip sep">|</span>
+        <button class="chip on" data-k="ucret" data-v="hepsi">Her ücret</button>
+        <button class="chip" data-k="ucret" data-v="uyelik">💳 Üyelik/MultiSport</button>
+        <button class="chip" data-k="ucret" data-v="ucretsiz">🆓 Ücretsiz</button>
+        <button class="chip" data-k="ucret" data-v="ucretli">💰 Ücretli</button>
+        <button class="chip" data-k="ucret" data-v="bilinmiyor">❔ Ücret bilinmiyor</button>
+      </div>
+    </div>
+
+    <div class="pickhint" id="pickhint">👆 Haritada bulunduğun yere dokun</div>
+
+    <div class="fab">
+      <button class="loc" id="locBtn">🎯 Konumum</button>
+      <button class="near" id="nearBtn">📍 En yakın kort</button>
+    </div>
+
+    <div id="sheet">
+      <div class="handle" id="handle"><div class="sum"><span><b id="count">0</b> kort</span><span id="sortinfo">Listeyi aç ▲</span></div></div>
+      <div id="list"></div>
+    </div>
+
+    <div class="overlay" id="detailOv"><div class="panel" id="detail"></div></div>
+    <div class="overlay" id="locOv"><div class="panel">
+      <div class="d-head"><button class="close" data-close="locOv" aria-label="Kapat">✕</button><h3>📍 Neredesin?</h3>
+        <div style="font-size:13px;opacity:.9">En yakın kortu bulmak için konumunu seç.</div></div>
+      <div class="d-body">
+        <div class="btns">
+          <button class="btn btn-primary" id="gpsBtn">📡 Cihaz konumu</button>
+          <button class="btn btn-ball" id="tapBtn">👆 Haritaya dokun</button>
+        </div>
+        <div class="msg" id="gpsMsg"></div>
+        <div class="section-t">Ya da semtini seç</div>
+        <div class="locgrid" id="locgrid"></div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="view" id="view-plan">
+<!--@PLAN@-->
+  </section>
+</main>
+
+<div id="temis">TEMİİİİS! 🎾</div>
+<div id="toast"></div>
+
+<script>
+/*@LEAFLET_JS@*/
+</script>
+<script>
+/*@GEO@*/
+</script>
+<script>
+"use strict";
+/* =========================================================
+   ÇEKİRDEK VERİ — konumlar YAKLAŞIKTIR, Faz 0'da doğrulanacak
+   ========================================================= */
+const COURTS = [
+  {id:"ttf",ad:"TTF Ankara Tenis Eğitim Merkezi",ilce:"Yenimahalle",lat:39.9540,lng:32.7905,tur:"acik",ucret:"bilinmiyor",
+   fiyat:"Yayımlanmış kort kiralama ücreti bulunamadı. Tesisle iletişime geçin.",kort:"12–14 (7 toprak + 6 sert + 3.500 kişilik merkez kort; kaynaklara göre değişiyor)",zemin:"Toprak + sert",
+   isletmeci:"Türkiye Tenis Federasyonu",adres:"Gazi Mah. Ankara Bulvarı No:12/6, 06560 Yenimahalle",tel:"+90 312 309 77 70",
+   not:"Ağustos 2025'te açıldı. Kapalı kort olup olmadığı doğrulanmadı.",kaynak:"https://en.wikipedia.org/wiki/TTF_Ankara_Tennis_Training_Center",kaynakAdi:"Wikipedia / TTF / 24 Saat"},
+  {id:"odtu",ad:"ODTÜ Spor Merkezi Tenis Kortları",ilce:"Çankaya",lat:39.8905,lng:32.7810,tur:"karma",ucret:"bilinmiyor",
+   fiyat:"Online rezervasyon var. ODTÜ mensubu ve dış kullanıcı tarifeleri tesisten teyit edilmeli.",kort:"13 (5 kapalı, 6 açık, 2 açık toprak)",zemin:"Sert + toprak",
+   isletmeci:"ODTÜ Spor Müdürlüğü",adres:"ODTÜ Kampüsü, Üniversiteler Mah.",kaynak:"https://spormd2.metu.edu.tr/en/node/54",kaynakAdi:"ODTÜ Spor Müdürlüğü"},
+  {id:"tandogan",ad:"Ankara Üniversitesi Tandoğan Tenis Kortları",ilce:"Yenimahalle",lat:39.9372,lng:32.8300,tur:"karma",ucret:"bilinmiyor",
+   fiyat:"Bilinmiyor",kort:"Kapalı + açık kortlar (sayı doğrulanmadı)",isletmeci:"Ankara Üniversitesi",adres:"Tandoğan Kampüsü",
+   not:"Üniversite sayfasında 'Tandoğan Kapalı ve Açık Tenis Kortları' olarak geçiyor.",kaynak:"https://iso.ankara.edu.tr/?p=16609",kaynakAdi:"Ankara Üniversitesi"},
+  {id:"bilkent",ad:"Bilkent Üniversitesi Tenis Kortları",ilce:"Çankaya",lat:39.8695,lng:32.7485,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Dışarıdan kullanım için üyelik seçeneği var (üçüncü taraf rehberine göre)",kort:"6 (doğrulanmadı)",isletmeci:"Bilkent Üniversitesi",adres:"Bilkent Kampüsü",
+   kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"sportsint",ad:"Sports International Bilkent",ilce:"Çankaya",lat:39.8862,lng:32.7565,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Üyelik bazlı spor kulübü",isletmeci:"Özel kulüp",adres:"Bilkent",kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"atk",ad:"Ankara Tenis Kulübü (ATK)",ilce:"Çankaya",lat:39.9150,lng:32.8530,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Kulüp üyeliği (detay bilinmiyor)",isletmeci:"Kulüp",adres:"Konum doğrulanacak",
+   not:"1947'de resmen açıldı; Ankara'nın en köklü tenis kulübü.",kaynak:"https://repository.bilkent.edu.tr/items/fc61be20-93c1-49bf-9e4e-1f0ad8e98450/full",kaynakAdi:"Bilkent repository"},
+  {id:"asta-sheraton",ad:"Asta Tenis Sheraton",ilce:"Çankaya (Kavaklıdere)",lat:39.9026,lng:32.8606,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli. Diğer ücretler tesisten öğrenilmeli.",isletmeci:"Asta Tenis",adres:"Sheraton Otel, Kavaklıdere",
+   kaynak:"https://benefitsystems.com.tr/en/facilities/asta-tenis-sheraton/",kaynakAdi:"MultiSport"},
+  {id:"asta-ahlatlibel",ad:"Asta Tenis Ahlatlıbel",ilce:"Çankaya",lat:39.8545,lng:32.8165,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Asta Tenis",adres:"Ahlatlıbel",kaynak:"https://benefitsystems.com.tr/en/facilities/asta-tenis/",kaynakAdi:"MultiSport"},
+  {id:"tc-cayyolu",ad:"Tennis Clinic Çayyolu",ilce:"Çankaya (Çayyolu)",lat:39.8800,lng:32.6900,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Tennis Clinic",adres:"Çayyolu",kaynak:"https://benefitsystems.com.tr/en/facilities/tennis-clinic-cayyolu/",kaynakAdi:"MultiSport"},
+  {id:"tc-umitkoy",ad:"Tennis Clinic Ümitköy",ilce:"Çankaya (Ümitköy)",lat:39.8905,lng:32.7060,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Tennis Clinic",adres:"Ümitköy",kaynak:"https://benefitsystems.com.tr/en/facilities/tennis-clinic-uemit/",kaynakAdi:"MultiSport"},
+  {id:"baselife",ad:"Base Life Club Çayyolu",ilce:"Çankaya (Çayyolu)",lat:39.8725,lng:32.6780,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Üyelik bazlı",isletmeci:"Özel kulüp",adres:"Çayyolu",kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"sehirkulubu",ad:"Ankara Şehir Kulübü",ilce:"Çankaya",lat:39.8985,lng:32.8640,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Kulüp üyeliği",isletmeci:"Özel kulüp",adres:"Çankaya",kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"atli",ad:"Atlı Spor Tenis Kulübü",ilce:"Yenimahalle (Beştepe)",lat:39.9300,lng:32.8020,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Ankara Atlı Spor Kulübü",adres:"Beştepe",kaynak:"https://benefitsystems.com.tr/en/facilities/atli-spor-tenis-kul-ue-b-ue/",kaynakAdi:"MultiSport"},
+  {id:"ahalteke",ad:"Ahal Teke Tenis Kulübü",ilce:"Gölbaşı / İncek",lat:39.8250,lng:32.7600,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Özel kulüp",adres:"Konum doğrulanacak",kaynak:"https://benefitsystems.com.tr/en/facilities/ahal-teke-tenis-kuluebue/",kaynakAdi:"MultiSport"},
+  {id:"atilim",ad:"Atılım Üniversitesi Tenis Kortu",ilce:"Gölbaşı (İncek)",lat:39.8160,lng:32.7225,tur:"bilinmiyor",ucret:"bilinmiyor",
+   fiyat:"Kullanım kuralları yayımlanmış, ücret bilgisi teyit edilmeli",isletmeci:"Atılım Üniversitesi",adres:"İncek Kampüsü",kaynak:"https://www.atilim.edu.tr/en/spor/page/6581/tennis-court-usage-rules",kaynakAdi:"Atılım Ü."},
+  {id:"royal",ad:"Royal Tenis Club",ilce:"Gölbaşı",lat:39.7930,lng:32.8140,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Yalnızca MultiSport Plus kartıyla",isletmeci:"Özel kulüp",adres:"Gölbaşı",kaynak:"https://benefitsystems.com.tr/en/facilities/royal-tenis-club",kaynakAdi:"MultiSport"},
+  {id:"parsport",ad:"ParSport Club – Tenis",ilce:"Gölbaşı",lat:39.7870,lng:32.8040,tur:"acik",ucret:"uyelik",
+   fiyat:"MultiSport ile 1 saat açık kort kullanımı",isletmeci:"Özel kulüp",adres:"Gölbaşı",kaynak:"https://benefitsystems.com.tr/en/facilities/par-sport-club-tenis",kaynakAdi:"MultiSport"},
+  {id:"atmaca",ad:"Atmaca Tenis Akademisi",ilce:"Gölbaşı",lat:39.7810,lng:32.8090,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Akademi",adres:"Gölbaşı",kaynak:"https://benefitsystems.com.tr/en/facilities/atmaca-tenis-akademisi/",kaynakAdi:"MultiSport"},
+  {id:"mot",ad:"MOT Mogan Tennis Club",ilce:"Gölbaşı",lat:39.7760,lng:32.7930,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",isletmeci:"Özel kulüp",adres:"Mogan Gölü çevresi",kaynak:"https://benefitsystems.com.tr/en/facilities/mot-mogan-tennis-club/",kaynakAdi:"MultiSport"},
+  {id:"etimesgut",ad:"Etimesgut Spor Tesisleri",ilce:"Etimesgut",lat:39.9470,lng:32.6700,tur:"bilinmiyor",ucret:"bilinmiyor",
+   fiyat:"Bilinmiyor (belediye tesisi, tarife teyit edilmeli)",isletmeci:"Belediye",adres:"Etimesgut",not:"Pickleheads'te kort olarak listelenmiş.",kaynak:"https://www.pickleheads.com/courts/tr/ankara/etimesgut/etimesgut-spor-tesisleri",kaynakAdi:"Pickleheads"},
+  {id:"tohm",ad:"TOHM Eryaman (GSB)",ilce:"Etimesgut (Eryaman)",lat:39.9765,lng:32.6185,tur:"bilinmiyor",ucret:"bilinmiyor",
+   fiyat:"Yaz spor okulu tenis eğitimleri var, kayıtlar e-Devlet üzerinden",isletmeci:"Gençlik ve Spor Bakanlığı",adres:"Eryaman",kaynak:"https://www.yeniankara.com.tr/ankara/etimesgutta-spor-dolu-bir-yaz-9-farkli-bransta-egitim-173605",kaynakAdi:"Yeni Ankara"},
+  {id:"lodumlu",ad:"Lodumlu Tenis Kortları (PROJE)",ilce:"Çankaya",lat:39.8960,lng:32.7640,tur:"bilinmiyor",ucret:"bilinmiyor",durum:"planlanan",
+   fiyat:"Henüz açılmadı",kort:"6 (uluslararası standart, planlanan)",isletmeci:"ABB – üst hakkı karşılığı",adres:"Lodumlu Mah.",
+   not:"İhale haberine göre planlanan bir tesis; inşaat durumu doğrulanmadı.",kaynak:"https://www.politikam.com/ankarada-ust-hakki-karsiligi-insaat-ihalesi",kaynakAdi:"Politika Gazetesi"},
+];
+
+/* Semtler: konum seçici ve harita etiketleri (yaklaşık merkezler) */
+const SEMTLER = [
+  ["Kızılay",39.9208,32.8541],["Ulus",39.9420,32.8547],["Kavaklıdere",39.9050,32.8600],["Bahçelievler",39.9215,32.8200],
+  ["Balgat",39.9040,32.8250],["Çukurambar",39.9030,32.8080],["Söğütözü",39.9100,32.8030],["Dikmen",39.8850,32.8380],
+  ["Oran",39.8560,32.8300],["Esat",39.9100,32.8680],["Çayyolu",39.8800,32.6880],["Ümitköy",39.8920,32.7050],
+  ["Bilkent",39.8700,32.7500],["Beytepe",39.8680,32.7340],["Batıkent",39.9680,32.7300],["Demetevler",39.9650,32.7900],
+  ["Eryaman",39.9800,32.6400],["Etimesgut",39.9500,32.6700],["Sincan",39.9690,32.5820],["Keçiören",39.9800,32.8650],
+  ["Mamak",39.9300,32.9150],["Pursaklar",40.0350,32.9000],["İncek",39.8150,32.7450],["Gölbaşı",39.7900,32.8070]
+];
+const LAKES = [
+  {n:"Mogan Gölü",c:[39.770,32.787],p:[[39.796,32.792],[39.790,32.800],[39.778,32.799],[39.765,32.795],[39.752,32.790],[39.744,32.782],[39.748,32.776],[39.760,32.779],[39.774,32.783],[39.787,32.786]]},
+  {n:"Eymir Gölü",c:[39.828,32.832],p:[[39.840,32.818],[39.836,32.826],[39.829,32.835],[39.821,32.845],[39.816,32.846],[39.818,32.838],[39.826,32.828],[39.834,32.819]]}
+];
+
+const TUR = {acik:["☀️ Açık","t-acik","#1f7a3a"],kapali:["🏠 Kapalı","t-kapali","#2563eb"],karma:["🔀 Açık + kapalı","t-karma","#8b5cf6"],bilinmiyor:["❔ Tür bilinmiyor","t-bilinmiyor","#6b7280"]};
+const UCRET = {ucretsiz:["🆓 Ücretsiz","f-ucretsiz"],ucretli:["💰 Ücretli","f-ucretli"],uyelik:["💳 Üyelik / MultiSport","f-uyelik"],bilinmiyor:["❔ Ücret bilinmiyor","f-bilinmiyor"]};
+
+const $ = s => document.querySelector(s);
+const state = {tur:"hepsi", ucret:"hepsi", q:"", me:null, meName:"", selected:null, pick:false, after:null};
+let soundOn = true;
+const wide = () => matchMedia("(min-width:900px)").matches;
+
+function esc(s){return String(s ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function km(a,b){const R=6371,t=x=>x*Math.PI/180,dLa=t(b[0]-a[0]),dLo=t(b[1]-a[1]);
+  const h=Math.sin(dLa/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function fmtKm(k){return k<1?Math.round(k*1000)+" m":k.toFixed(1).replace(".",",")+" km"}
+let toastT; function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),2600);}
+const ls = {get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ================= HARİTA (çevrimdışı vektör) ================= */
+let map=null, meMarker=null, lineLayer=null; const markers={};
+try{
+  map = L.map("map",{zoomControl:false,minZoom:9,maxZoom:17,maxBounds:[[39.55,32.30],[40.25,33.35]],maxBoundsViscosity:.8,attributionControl:true})
+    .setView([39.90,32.78],11);
+  map.attributionControl.setPrefix(false).addAttribution("Şematik harita · Sınırlar: geoBoundaries · Yollar: Natural Earth");
+  L.control.zoom({position:"bottomleft"}).addTo(map);
+  const base = L.layerGroup().addTo(map);
+  GEO.districts.forEach(d=>L.polygon(d.p,{color:"#b9b29e",weight:1.2,dashArray:"4 3",fillColor:"#fbfaf5",fillOpacity:1,interactive:false}).addTo(base));
+  GEO.urban.forEach(u=>L.polygon(u,{stroke:false,fillColor:"#efe5cf",fillOpacity:1,interactive:false}).addTo(base));
+  LAKES.forEach(l=>L.polygon(l.p,{color:"#7fb6e6",weight:1,fillColor:"#a9d3f5",fillOpacity:1,interactive:false,smoothFactor:0}).addTo(base));
+  GEO.roads.forEach(r=>L.polyline(r.c,{color:"#fff",weight:r.t===1?7:4,interactive:false}).addTo(base));
+  GEO.roads.forEach(r=>L.polyline(r.c,{color:r.t===1?"#f2b33d":"#d9d2bf",weight:r.t===1?4:2,interactive:false}).addTo(base));
+  const lbl=(ll,txt,cls)=>L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="lbl ${cls}">${esc(txt)}</div>`,iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(base);
+  GEO.districts.forEach(d=>lbl(d.c,d.n,"lbl-d"));
+  SEMTLER.forEach(s=>lbl([s[1],s[2]],s[0],"lbl-s"));
+  LAKES.forEach(l=>lbl(l.c,l.n,"lbl-s lbl-w"));
+  const zc=()=>map.getContainer().classList.toggle("z12",map.getZoom()>=12); map.on("zoomend",zc); zc();
+
+  COURTS.forEach(c=>{
+    markers[c.id]=L.marker([c.lat,c.lng],{icon:pinIcon(c,false),title:c.ad,riseOnHover:true}).addTo(map)
+      .on("click",()=>{ if(state.pick) return setMe([c.lat,c.lng],"Haritadan seçilen konum"); select(c.id,true); });
+  });
+  map.on("click",e=>{ if(state.pick) setMe([e.latlng.lat,e.latlng.lng],"Haritadan seçilen konum"); });
+}catch(err){ console.error(err); $("#map").innerHTML='<p style="padding:120px 20px;text-align:center;color:#555">Harita yüklenemedi, aşağıdaki listeyi kullanabilirsin.</p>'; }
+
+function pinIcon(c,sel){
+  return L.divIcon({className:"",html:`<div class="pin ${c.durum==="planlanan"?"plan":""} ${sel?"sel":""}" style="--c:${TUR[c.tur][2]}"></div>`,iconSize:[30,30],iconAnchor:[15,15]});
+}
+
+/* ================= LİSTE / FİLTRE ================= */
+function filtered(){
+  const q=state.q.trim().toLocaleLowerCase("tr");
+  const arr=COURTS.filter(c=>(state.tur==="hepsi"||c.tur===state.tur)&&(state.ucret==="hepsi"||c.ucret===state.ucret)&&
+    (!q||(c.ad+" "+c.ilce+" "+(c.isletmeci||"")+" "+(c.adres||"")).toLocaleLowerCase("tr").includes(q)));
+  if(state.me) arr.sort((a,b)=>km(state.me,[a.lat,a.lng])-km(state.me,[b.lat,b.lng]));
+  return arr;
+}
+function renderList(){
+  const arr=filtered(), ids=new Set(arr.map(c=>c.id));
+  if(map) COURTS.forEach(c=>{const m=markers[c.id]; if(!m) return; ids.has(c.id)?m.addTo(map):m.remove(); m.setIcon(pinIcon(c,state.selected===c.id));});
+  $("#count").textContent=arr.length;
+  $("#sortinfo").textContent = state.me ? `📍 ${state.meName} yakınına göre` : (wide()?"Kaynak linkli çekirdek liste":(sheetOpen?"Listeyi kapat ▼":"Listeyi aç ▲"));
+  $("#list").innerHTML = arr.map(c=>{
+    const rv=reviewsOf(c.id), avg=rv.length?(rv.reduce((s,x)=>s+x.puan,0)/rv.length).toFixed(1).replace(".",","):null;
+    return `<div class="item ${state.selected===c.id?"sel":""}" data-id="${esc(c.id)}">
+      <div class="dot"><div class="pin ${c.durum==="planlanan"?"plan":""}" style="--c:${TUR[c.tur][2]}"></div></div>
+      <div class="body"><h4>${esc(c.ad)}</h4><div class="meta"><span class="tag">📍 ${esc(c.ilce)}</span>
+        <span class="tag ${TUR[c.tur][1]}">${TUR[c.tur][0]}</span><span class="tag ${UCRET[c.ucret][1]}">${UCRET[c.ucret][0]}</span>
+        ${c.durum==="planlanan"?'<span class="tag warn">🚧 Planlanan</span>':""}${avg?`<span class="tag">⭐ ${avg} (${rv.length})</span>`:""}</div></div>
+      ${state.me?`<div class="dist">${fmtKm(km(state.me,[c.lat,c.lng]))}</div>`:""}</div>`;
+  }).join("") || `<p class="src" style="padding:12px">Bu filtrelerle kort bulunamadı. Çekirdek listede ücreti doğrulanmış (ücretsiz/ücretli) kort henüz yok. Bu bilgiler Faz 0'da toplanacak.</p>`;
+}
+$("#list").addEventListener("click",e=>{const it=e.target.closest(".item"); if(it) select(it.dataset.id,true);});
+$("#q").addEventListener("input",e=>{state.q=e.target.value; renderList();});
+$("#chips").addEventListener("click",e=>{
+  const ch=e.target.closest(".chip[data-k]"); if(!ch) return;
+  document.querySelectorAll(`.chip[data-k="${ch.dataset.k}"]`).forEach(x=>x.classList.toggle("on",x===ch));
+  state[ch.dataset.k]=ch.dataset.v; renderList();
+  if(!wide()) setSheet(true);
+});
+
+/* Alt panel aç/kapa (mobil) */
+let sheetOpen=false;
+function setSheet(open){ sheetOpen=open; document.documentElement.style.setProperty("--sheet-h", open?"58%":"150px"); renderList(); }
+$("#handle").addEventListener("click",()=>{ if(!wide()) setSheet(!sheetOpen); });
+
+/* ================= DETAY ================= */
+function focusOn(ll){
+  if(!map) return;
+  const z=Math.max(map.getZoom(),14);
+  let p=map.project(ll,z);
+  p = wide()? p.add([200,0]) : p.add([0, map.getSize().y*0.28]);
+  map.flyTo(map.unproject(p,z),z,{duration:.6});
+}
+function select(id,fromUser){
+  const c=COURTS.find(x=>x.id===id); if(!c) return;
+  state.selected=id; if(fromUser) temis();
+  focusOn([c.lat,c.lng]); renderList(); renderDetail(c);
+  if(state.me) drawLine(c);
+}
+function dirLinks(c){
+  const o=state.me?`&origin=${state.me[0]},${state.me[1]}`:"";
+  return {g:`https://www.google.com/maps/dir/?api=1${o}&destination=${c.lat},${c.lng}&travelmode=driving`,
+          a:`https://maps.apple.com/?${state.me?`saddr=${state.me[0]},${state.me[1]}&`:""}daddr=${c.lat},${c.lng}&dirflg=d`};
+}
+function routeText(c){
+  if(!state.me) return "";
+  const d=km(state.me,[c.lat,c.lng]), road=d*1.35, min=Math.max(3,Math.round(road/32*60));
+  return `🚗 <b>${state.meName}</b> noktasından kuş uçuşu <b>${fmtKm(d)}</b>. Yolla yaklaşık <b>${fmtKm(road)}</b>, arabayla <b>~${min} dk</b> sürer (tahmini). Adım adım yol tarifi için aşağıdan harita uygulamasını aç.`;
+}
+function renderDetail(c){
+  const rv=reviewsOf(c.id), L2=dirLinks(c);
+  $("#detail").innerHTML=`
+   <div class="d-head"><button class="close" data-close="detailOv" aria-label="Kapat">✕</button>
+     <h3>${esc(c.ad)}</h3>
+     <div class="meta"><span class="tag ${TUR[c.tur][1]}">${TUR[c.tur][0]}</span><span class="tag ${UCRET[c.ucret][1]}">${UCRET[c.ucret][0]}</span>
+       ${c.durum==="planlanan"?'<span class="tag warn">🚧 Planlanan</span>':""}</div>
+     <div style="font-size:13px;margin-top:6px;opacity:.92">📍 ${esc(c.ilce)}${state.me?` · ${fmtKm(km(state.me,[c.lat,c.lng]))} uzakta`:""}</div>
+   </div>
+   <div class="d-body">
+     <div class="price">💸 <b>Ücret:</b> ${esc(c.fiyat||"Bilinmiyor")}</div>
+     <div class="kv">
+       <b>Kort sayısı</b><span>${esc(c.kort||"—")}</span>
+       <b>Zemin</b><span>${esc(c.zemin||"—")}</span>
+       <b>İşletmeci</b><span>${esc(c.isletmeci||"—")}</span>
+       <b>Adres</b><span>${esc(c.adres||"—")}</span>
+       ${c.tel?`<b>Telefon</b><span><a href="tel:${esc(c.tel.replace(/\s/g,""))}">${esc(c.tel)}</a></span>`:""}
+       ${c.not?`<b>Not</b><span>${esc(c.not)}</span>`:""}
+     </div>
+     <div class="route-info" id="routeInfo" ${state.me?"":"hidden"}>${routeText(c)}</div>
+     <div class="btns">
+       <a class="btn btn-primary" href="${L2.g}" target="_blank" rel="noopener">🧭 Google Maps</a>
+       <a class="btn btn-ghost" href="${L2.a}" target="_blank" rel="noopener">🍎 Apple Haritalar</a>
+       ${state.me?"":'<button class="btn btn-ball wide" id="setLocBtn">📍 Konumumu seç, mesafeyi göster</button>'}
+     </div>
+     <p class="src">Kaynak: ${c.kaynak?`<a href="${esc(c.kaynak)}" target="_blank" rel="noopener">${esc(c.kaynakAdi||"link")}</a>`:esc(c.kaynakAdi||"—")} · ⚠️ Konum yaklaşık, bilgiler doğrulanacak</p>
+
+     <div class="section-t">💬 Yorumlar (${rv.length}) <span class="mode" id="modeTag">${Store.label()}</span></div>
+     <div class="stars" id="stars">${[1,2,3,4,5].map(i=>`<span data-v="${i}">★</span>`).join("")}</div>
+     <input type="text" id="nick" placeholder="Takma adın (üyelik gerekmez)" maxlength="30" style="margin:8px 0" value="${esc(ls.get("kortbul-nick")||"")}">
+     <textarea id="ctext" placeholder="Kort nasıldı? Zemin, ışık, ücret, kalabalık…" maxlength="500"></textarea>
+     <button class="btn btn-ball" id="csend" style="margin-top:8px;width:100%">Yorumu gönder 🎾</button>
+     <div class="msg" id="cmsg"></div>
+     <div id="clist">${rv.length?rv.map(x=>`<div class="comment"><span class="who">${esc(x.nick)}</span>${x.mine?'<span class="mine">sen</span>':""}<span class="when">${new Date(x.t).toLocaleDateString("tr-TR")}</span>
+        <div style="color:#f59e0b">${"★".repeat(x.puan)}<span style="color:#d1d5db">${"★".repeat(5-x.puan)}</span></div><div>${esc(x.text)}</div></div>`).join("")
+        :'<p class="src">Henüz yorum yok. İlk yorumu sen yaz! 🎾</p>'}</div>
+   </div>`;
+  $("#detailOv").classList.add("open");
+  const sl=$("#setLocBtn"); if(sl) sl.onclick=()=>openLoc(()=>select(c.id,false));
+  let rating=0; const stars=[...document.querySelectorAll("#stars span")];
+  const paint=v=>stars.forEach(s=>s.classList.toggle("on",+s.dataset.v<=v));
+  stars.forEach(s=>s.onclick=()=>{rating=+s.dataset.v; paint(rating);});
+  $("#csend").onclick=async()=>{
+    const text=$("#ctext").value.trim(), nick=$("#nick").value.trim()||"Anonim tenisçi", m=$("#cmsg");
+    if(!rating){m.className="msg err";m.textContent="Önce 1–5 arası yıldız ver ⭐";return;}
+    if(text.length<3){m.className="msg err";m.textContent="Biraz daha yaz 🙂";return;}
+    ls.set("kortbul-nick",nick);
+    $("#csend").disabled=true; m.className="msg"; m.textContent="Kaydediliyor…";
+    const ok=await Store.add(c.id,{nick,puan:rating,text,t:Date.now()});
+    temis(); renderList(); renderDetail(c);
+    const m2=$("#cmsg"); m2.className="msg ok"; m2.textContent= ok==="db"?"Yorumun herkesle paylaşıldı ✅":"Yorumun bu cihaza kaydedildi ✅";
+  };
+}
+function closeDetail(){ $("#detailOv").classList.remove("open"); state.selected=null; if(lineLayer){lineLayer.remove();lineLayer=null;} renderList(); }
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-close]"); if(b){ b.dataset.close==="detailOv"?closeDetail():$("#"+b.dataset.close).classList.remove("open"); return; }
+  if(e.target.id==="detailOv" && !wide()) closeDetail();
+  if(e.target.id==="locOv") $("#locOv").classList.remove("open");
+});
+
+/* ================= KONUM + EN YAKIN ================= */
+$("#locgrid").innerHTML=SEMTLER.slice().sort((a,b)=>a[0].localeCompare(b[0],"tr")).map(s=>`<button data-s="${esc(s[0])}">${esc(s[0])}</button>`).join("");
+$("#locgrid").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return; const s=SEMTLER.find(x=>x[0]===b.dataset.s); setMe([s[1],s[2]],s[0]);});
+function openLoc(after){ state.after=after||null; $("#gpsMsg").textContent=""; $("#locOv").classList.add("open"); }
+$("#locBtn").onclick=()=>openLoc(null);
+$("#nearBtn").onclick=()=>{ state.me ? goNearest() : openLoc(goNearest); };
+$("#tapBtn").onclick=()=>{ $("#locOv").classList.remove("open"); closeDetailSoft(); state.pick=true; $("#pickhint").classList.add("on"); if(!wide()) setSheet(false); };
+$("#gpsBtn").onclick=()=>{
+  const m=$("#gpsMsg"); m.className="msg"; m.textContent="📡 Konum alınıyor…";
+  if(!navigator.geolocation){ m.className="msg err"; m.textContent="Bu cihazda konum desteklenmiyor. Semt seç ya da haritaya dokun."; return; }
+  let done=false; const fail=()=>{ if(done) return; done=true; m.className="msg err"; m.textContent="Bu görünümde konum izni verilmiyor. Aşağıdan semtini seç ya da 👆 haritaya dokun."; };
+  const t=setTimeout(fail,7000);
+  try{ navigator.geolocation.getCurrentPosition(p=>{ if(done) return; done=true; clearTimeout(t); setMe([p.coords.latitude,p.coords.longitude],"Bulunduğun yer"); },()=>{clearTimeout(t);fail();},{enableHighAccuracy:true,timeout:6500}); }
+  catch(e){ clearTimeout(t); fail(); }
+};
+function closeDetailSoft(){ $("#detailOv").classList.remove("open"); }
+function setMe(ll,name){
+  state.me=ll; state.meName=name; state.pick=false; $("#pickhint").classList.remove("on"); $("#locOv").classList.remove("open");
+  ls.set("kortbul-me",{ll,name});
+  if(map){ if(meMarker) meMarker.remove();
+    meMarker=L.marker(ll,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[20,20],iconAnchor:[10,10]}),zIndexOffset:1000}).addTo(map).bindTooltip("📍 "+name,{direction:"top",offset:[0,-10]}); }
+  toast(`📍 Konum: ${name}`);
+  renderList();
+  const a=state.after; state.after=null;
+  if(a) a(); else if(state.selected) select(state.selected,false); else if(map) map.flyTo(ll,13,{duration:.6});
+}
+function goNearest(){
+  const c=filtered().find(x=>x.durum!=="planlanan"); if(!c){ toast("Bu filtrelerle kort yok"); return; }
+  toast(`🎾 En yakın: ${c.ad} (${fmtKm(km(state.me,[c.lat,c.lng]))})`);
+  select(c.id,true);
+  if(map && lineLayer){ const b=lineLayer.getBounds(); map.fitBounds(b,wide()?{paddingTopLeft:[60,140],paddingBottomRight:[440,60]}:{paddingTopLeft:[40,140],paddingBottomRight:[40,Math.round(innerHeight*.55)]}); }
+}
+function drawLine(c){
+  if(!map||!state.me) return;
+  if(lineLayer) lineLayer.remove();
+  lineLayer=L.polyline([state.me,[c.lat,c.lng]],{color:"#2563eb",weight:4,dashArray:"8 8",opacity:.9}).addTo(map);
+}
+
+/* ================= YORUMLAR: paylaşımlı veritabanı, yoksa cihaz ================= */
+const Store = {
+  mode:"local", db:null, uid:null, shared:{}, myItems:{},
+  label(){ return this.mode==="db"?"🌐 Herkesle paylaşılıyor":"📱 Bu cihazda saklanıyor"; },
+  local(){ return ls.get("kortbul-yorumlar")||{}; },
+  async init(){
+    try{
+      if(!window.claude || typeof window.claude.use!=="function") return;
+      const [db,user]=await Promise.all([window.claude.use("db"),window.claude.use("user")]);
+      if(!db||!user) return;
+      const uid=await user.id(); if(!uid) return;
+      this.db=db; this.uid=uid;
+      const timer=setTimeout(()=>{ if(this.mode!=="db") toast("Paylaşımlı yorumlara şu an ulaşılamıyor"); },10000);
+      db.collection("reviews").onSnapshot(snap=>{
+        clearTimeout(timer); this.mode="db"; const all={};
+        snap.docs.forEach(d=>{ const items=(d.data()||{}).items||{};
+          if(d.id===uid) this.myItems=JSON.parse(JSON.stringify(items));
+          Object.keys(items).forEach(cid=>{ const r=items[cid]; if(!r||typeof r!=="object") return;
+            (all[cid]=all[cid]||[]).push({nick:String(r.nick||"Anonim").slice(0,30),puan:Math.min(5,Math.max(1,+r.puan||1)),text:String(r.text||"").slice(0,500),t:+r.t||0,mine:d.id===uid}); }); });
+        Object.values(all).forEach(a=>a.sort((x,y)=>y.t-x.t));
+        this.shared=all; renderList(); refreshOpenDetail();
+      },err=>{ clearTimeout(timer); console.warn("db",err); this.mode="local"; renderList(); });
+    }catch(e){ console.warn(e); }
+  },
+  get(cid){
+    if(this.mode==="db") return this.shared[cid]||[];
+    return (this.local()[cid]||[]).map(x=>({...x,mine:true}));
+  },
+  async add(cid,r){
+    if(this.mode==="db"&&this.db&&this.uid){
+      try{ const items={...this.myItems,[cid]:r}; await this.db.doc("reviews/"+this.uid).set({items}); this.myItems=items; return "db"; }
+      catch(e){ console.warn("db write",e); this.mode="local"; toast("Paylaşımlı kayıt yapılamadı, yorum bu cihaza kaydedildi"); }
+    }
+    const all=this.local(); (all[cid]=all[cid]||[]).unshift(r); ls.set("kortbul-yorumlar",all); return "local";
+  }
+};
+function reviewsOf(id){ return Store.get(id); }
+function refreshOpenDetail(){
+  if(!state.selected||!$("#detailOv").classList.contains("open")) return;
+  const ta=$("#ctext"); if(ta && (ta.value.trim() || document.activeElement===ta || document.activeElement===$("#nick"))) { const mt=$("#modeTag"); if(mt) mt.textContent=Store.label(); return; }
+  renderDetail(COURTS.find(x=>x.id===state.selected));
+}
+
+/* =========================================================
+   🎾 TEMİİİİS! — konuşma sentezi + top sesi + tribün alkışı
+   ========================================================= */
+let actx=null;
+function ctx(){ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume(); return actx; }
+function noiseBuf(sec){const a=ctx(),b=a.createBuffer(1,Math.floor(a.sampleRate*sec),a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+function ballHit(t0){const a=ctx(),o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.setValueAtTime(320,t0);o.frequency.exponentialRampToValueAtTime(70,t0+.12);
+  g.gain.setValueAtTime(.9,t0);g.gain.exponentialRampToValueAtTime(.001,t0+.15);o.connect(g).connect(a.destination);o.start(t0);o.stop(t0+.16);}
+function crowd(t0){const a=ctx(),src=a.createBufferSource();src.buffer=noiseBuf(2.2);const bp=a.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1100;bp.Q.value=.6;
+  const g=a.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.35,t0+.35);g.gain.linearRampToValueAtTime(.25,t0+1.2);g.gain.linearRampToValueAtTime(0,t0+2.1);
+  const lfo=a.createOscillator(),lg=a.createGain();lfo.frequency.value=13;lg.gain.value=.12;lfo.connect(lg).connect(g.gain);
+  src.connect(bp).connect(g).connect(a.destination);src.start(t0);lfo.start(t0);lfo.stop(t0+2.2);}
+function synthTemis(t0){ // Türkçe ses yoksa: "te-miiiiis" benzeri sentez
+  const a=ctx(),out=a.createGain();out.gain.value=.28;out.connect(a.destination);
+  const f1=a.createBiquadFilter();f1.type="bandpass";f1.Q.value=4;const f2=a.createBiquadFilter();f2.type="bandpass";f2.Q.value=6;
+  const o=a.createOscillator();o.type="sawtooth";const vib=a.createOscillator(),vg=a.createGain();vib.frequency.value=6;vg.gain.value=12;vib.connect(vg).connect(o.frequency);
+  o.frequency.setValueAtTime(260,t0);o.frequency.setValueAtTime(330,t0+.16);o.frequency.linearRampToValueAtTime(440,t0+1.0);
+  f1.frequency.setValueAtTime(600,t0);f1.frequency.setValueAtTime(300,t0+.16);f2.frequency.setValueAtTime(1800,t0);f2.frequency.setValueAtTime(2700,t0+.16);
+  const g=a.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(1,t0+.03);g.gain.setValueAtTime(1,t0+1.0);g.gain.linearRampToValueAtTime(0,t0+1.1);
+  o.connect(f1).connect(g);o.connect(f2).connect(g);g.connect(out);o.start(t0);vib.start(t0);o.stop(t0+1.15);vib.stop(t0+1.15);
+  const s=a.createBufferSource();s.buffer=noiseBuf(.35);const hp=a.createBiquadFilter();hp.type="highpass";hp.frequency.value=4500;
+  const sg=a.createGain();sg.gain.setValueAtTime(0,t0+1.05);sg.gain.linearRampToValueAtTime(.6,t0+1.1);sg.gain.linearRampToValueAtTime(0,t0+1.4);s.connect(hp).connect(sg).connect(out);s.start(t0+1.05);}
+function speakTemis(){
+  try{
+    if(!("speechSynthesis" in window)) return false;
+    const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith("tr")); if(!v) return false;
+    const u=new SpeechSynthesisUtterance("Temiiiiiiiiis!"); u.voice=v; u.lang="tr-TR"; u.pitch=1.9; u.rate=.85; u.volume=1;
+    speechSynthesis.cancel(); speechSynthesis.speak(u); return true;
+  }catch(e){ return false; }
+}
+try{ if("speechSynthesis" in window) speechSynthesis.getVoices(); }catch(e){}
+function temis(){
+  const el=$("#temis"); el.classList.remove("go"); void el.offsetWidth; el.classList.add("go"); flyBall();
+  if(!soundOn) return;
+  try{ const a=ctx(),t=a.currentTime+.02; ballHit(t); crowd(t+.15); if(!speakTemis()) synthTemis(t+.12); }catch(e){ console.warn(e); }
+}
+function flyBall(){
+  const b=document.createElement("div"); b.className="ballfly"; document.body.appendChild(b);
+  const x0=-40,y0=innerHeight*.7,x1=innerWidth+40,peak=innerHeight*.15,t0=performance.now(),dur=900;
+  (function step(now){const p=Math.min(1,(now-t0)/dur),x=x0+(x1-x0)*p,y=y0-(4*p*(1-p))*(y0-peak);
+    b.style.transform=`translate(${x}px,${y}px) rotate(${p*720}deg)`; p<1?requestAnimationFrame(step):b.remove();})(t0);
+}
+$("#soundBtn").onclick=()=>{ soundOn=!soundOn; $("#soundBtn").textContent=soundOn?"🔊":"🔇"; if(soundOn) temis(); else toast("Ses kapatıldı"); };
+
+/* ================= SEKMELER ================= */
+function show(v){
+  document.querySelectorAll(".tab[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===v));
+  $("#view-map").style.display=v==="map"?"block":"none"; $("#view-plan").style.display=v==="plan"?"block":"none";
+  if(v==="map"&&map) setTimeout(()=>map.invalidateSize(),50);
+}
+document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>show(t.dataset.view));
+if(location.hash==="#plan") show("plan");
+
+/* ================= BAŞLAT ================= */
+const saved=ls.get("kortbul-me");
+if(saved&&saved.ll){ state.me=saved.ll; state.meName=saved.name; if(map) meMarker=L.marker(saved.ll,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[20,20],iconAnchor:[10,10]}),zIndexOffset:1000}).addTo(map).bindTooltip("📍 "+saved.name,{direction:"top",offset:[0,-10]}); }
+setSheet(false);
+if(map){ const b=L.latLngBounds(COURTS.map(c=>[c.lat,c.lng])); map.fitBounds(b,wide()?{padding:[40,40],paddingTopLeft:[40,120]}:{paddingTopLeft:[20,120],paddingBottomRight:[20,170]}); }
+addEventListener("resize",()=>{ if(map) map.invalidateSize(); renderList(); });
+Store.init();
+</script>
+</body>
+</html>

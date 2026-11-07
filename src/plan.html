@@ -1,0 +1,120 @@
+<div class="plan">
+    <h1>🎾 KortBul Ankara: Ürün Planı ve Veri Araştırması</h1>
+    <p class="src">Hazırlanma tarihi: 7 Kasım 2026 · Durum: Keşif + tıklanabilir demo (v0.2)</p>
+    <div class="callout">
+      <b>Bu demo nasıl çalışıyor?</b> Sayfa tamamen kendi içinde çalışır, dış siteden hiçbir şey yüklemez. Bu yüzden telefonda Claude uygulamasının içinde de açılır.
+      Harita gerçek Ankara ilçe sınırları (geoBoundaries), ana yollar ve yerleşim alanları (Natural Earth) ile çizildi. Uydu ya da sokak detayı yok, şematik bir harita.
+      Konumunu semt seçerek ya da haritaya dokunarak verebilirsin. Yol tarifi Google Maps'te ya da Apple Haritalar'da açılır.
+      Yorumlar, sayfayı paylaştığın kişilerle ortak bir veritabanına kaydedilir.
+    </div>
+
+    <div class="callout">
+      <b>Özet:</b> Ankara'daki tenis kortlarının <b>hepsini</b> tek yerde, güncel ve resmi biçimde listeleyen bir kaynak <b>yok</b>.
+      Belediyelerin, Gençlik ve Spor İl Müdürlüğü'nün ve TTF'nin hiçbirinde ücret ve açık/kapalı bilgisiyle birlikte toplu bir kort listesi bulamadık.
+      Bu yüzden veriyi <b>birden çok kaynaktan birleştireceğiz</b>. Otomatik çekilebilecek en iyi toplu kaynak <b>OpenStreetMap (Overpass API)</b>.
+      Gerçek uygulamada sunucu bu veriyi her gece otomatik çekecek.
+      Üzerine elle doğrulanmış bir çekirdek liste ekliyoruz: şu an 22 tesis, kaynak linkleriyle.
+    </div>
+
+    <h2>1. Veri kaynakları araştırması</h2>
+    <table>
+      <tr><th>Kaynak</th><th>Ne verir?</th><th>Otomatik çekilebilir mi?</th><th>Açık/kapalı</th><th>Ücret</th><th>Not</th></tr>
+      <tr><td><b>OpenStreetMap / Overpass API</b></td><td>Kort konumları (<code>sport=tennis</code>), isim, <code>covered</code>, <code>fee</code>, <code>access</code>, <code>surface</code>, <code>opening_hours</code></td><td class="ok">Evet, ücretsiz API</td><td class="mid">Kısmen (<code>covered</code> etiketi)</td><td class="mid">Kısmen (<code>fee</code> etiketi)</td><td>ODbL lisansı, kaynak belirtilmeli. Apartman ve site kortları da çıkar, filtrelemek gerekir. En iyi başlangıç noktası.</td></tr>
+      <tr><td><b>Google Places API</b></td><td>İsim, adres, telefon, çalışma saatleri, puan, fotoğraf</td><td class="mid">Evet, ama ücretli ve kotalı</td><td class="no">Hayır</td><td class="no">Hayır</td><td>Kullanım şartları veriyi kalıcı saklamayı kısıtlar. Çalışma saatlerini ve telefonu zenginleştirmek için kullanılabilir.</td></tr>
+      <tr><td><b>MultiSport (benefitsystems.com.tr)</b></td><td>Ankara'daki anlaşmalı tenis kulüpleri ve adresleri</td><td class="mid">Sayfa sayfa (scraping, izin gerekir)</td><td class="mid">Bazen</td><td class="mid">"MultiSport ile X saat" bilgisi</td><td>Özel kulüp listesi için çok iyi bir kaynak (Royal, ParSport, Asta, Tennis Clinic, MOT Mogan…)</td></tr>
+      <tr><td><b>Türkiye Tenis Federasyonu (ttf.org.tr)</b></td><td>Tescilli kulüpler, TTF Ankara Tenis Eğitim Merkezi</td><td class="no">Hayır (PDF ve haber)</td><td class="mid">Bazen</td><td class="no">Hayır</td><td>Kulüp tescil listesi resmi talep yoluyla istenebilir.</td></tr>
+      <tr><td><b>Üniversiteler</b> (ODTÜ, Bilkent, Ankara Ü., Atılım…)</td><td>Kort sayısı, zemin, rezervasyon</td><td class="no">Elle</td><td class="ok">Çoğunlukla var</td><td class="mid">Bazen tarife yayımlanıyor</td><td>ODTÜ: 13 kort (5 kapalı, 6 açık, 2 açık toprak), online rezervasyon.</td></tr>
+      <tr><td><b>Belediyeler</b> (ABB, Çankaya, Yenimahalle, Etimesgut, Keçiören…)</td><td>Park içi ve tesis kortları, ücretsiz kurslar</td><td class="no">Elle (faaliyet raporu ve haber)</td><td class="mid">Nadiren</td><td class="no">Ankara için tarife bulamadık</td><td>Tarife için resmi bilgi edinme başvurusu (CİMER / BİMER) yapılabilir.</td></tr>
+      <tr><td><b>GSB / Gençlik ve Spor İl Müdürlüğü</b></td><td>TOHM Eryaman vb. tesisler, yaz spor okulları</td><td class="no">Elle</td><td class="mid">Nadiren</td><td class="no">Hayır</td><td>Kayıtlar e-Devlet üzerinden yapılıyor.</td></tr>
+      <tr><td><b>Kitle kaynaklı (kullanıcılar)</b></td><td>Ücret, açık/kapalı, durum, yorum</td><td class="ok">Uygulamanın kendisi</td><td class="ok">Evet</td><td class="ok">Evet</td><td>Uzun vadede en güncel kaynak bu olur ("bu bilgi yanlış" butonu ve moderasyon).</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <b>Dürüstlük notu:</b> Demodaki 22 tesisin konumları <b>yaklaşıktır</b>; tesis adları ve özellikleri aşağıdaki kaynaklardan derlendi.
+      <b>Ücretler:</b> Ankara'daki kortlar için yayımlanmış güncel bir saatlik ücret tarifesi bulamadık. Bu yüzden çoğu kortta "bilinmiyor / tesisle teyit edin" yazıyor.
+      (Fikir vermesi için: İBB'nin 2026 tarifesinde aydınlatmalı tenis kortu saatliği 500 TL. Bu İstanbul fiyatıdır, Ankara için geçerli değildir.)
+      Faz 0'da her tesis aranıp ücret ve açık/kapalı bilgisi doğrulanacak.
+    </div>
+
+    <h3>Overpass sorgusu (otomatik çekim için)</h3>
+<pre>[out:json][timeout:60];
+area["name"="Ankara"]["admin_level"="4"]->.ankara;
+nwr["sport"="tennis"](area.ankara);
+out center tags;</pre>
+    <p>Dönen alanlar: <code>covered=yes</code> → kapalı · <code>fee=yes/no</code> → ücretli/ücretsiz · <code>access=private</code> → site veya kulübe özel · <code>surface=clay/hard/acrylic</code> → zemin.
+    Aynı tesisteki birden çok kort poligonu 50 m yarıçapta kümelenip tek bir "tesis" yapılacak.</p>
+
+    <h2>2. Ürün özellikleri (MVP)</h2>
+    <div class="grid3">
+      <div class="card"><h3>🗺️ Harita ve liste</h3>Tüm kortlar harita üzerinde. Renkler türü gösterir: açık, kapalı, karma. Arama yapılabilir, ilçeye, türe ve ücrete göre filtrelenebilir.</div>
+      <div class="card"><h3>📍 En yakın kort + yol tarifi</h3>Tarayıcının konum izniyle en yakın kortlar sıralanır. Rota çizilir (OSRM), süre ve mesafe gösterilir. Tek tıkla Google Maps / Apple Maps / Yandex'te yol tarifi açılır.</div>
+      <div class="card"><h3>💸 Ücret bilgisi</h3>Biliniyorsa saatlik ücret, gündüz/akşam farkı ve MultiSport geçerliliği. Bilinmiyorsa "bilinmiyor" yazar. Her bilginin kaynağı ve son doğrulama tarihi gösterilir.</div>
+      <div class="card"><h3>💬 Yorum ve puan</h3>Üyelik yok: takma ad, 1–5 yıldız ve yorum yeterli. Spama karşı hız sınırı ve captcha var, moderasyon kuyruğu tutulur.</div>
+      <div class="card"><h3>🎾 "Temiiiis!"</h3>Her korta tıklayınca coşkulu bir "Temiiiis!" sesi, top sesi ve tribün alkışı çalar. Ekranda ayrıca bir animasyon çıkar. Sağ üstteki düğmeden kapatılabilir.</div>
+      <div class="card"><h3>🚩 Bilgi düzeltme</h3>"Bu bilgi yanlış" ve "Ücreti ben biliyorum" formları var. Kitle kaynaklı güncellemeler moderasyondan sonra yayınlanır.</div>
+    </div>
+    <p><b>Kapsam dışı (şimdilik):</b> üyelik ve giriş, rezervasyon ve ödeme, kulüp paneli.</p>
+
+    <h2>3. Veri modeli</h2>
+<pre>Tesis (court_facility)
+  id, ad, ilce, adres, konum (PostGIS POINT)
+  tur: acik | kapali | karma | bilinmiyor
+  kort_sayisi, zemin: toprak | sert | cim | karma
+  ucret_turu: ucretsiz | ucretli | uyelik | bilinmiyor
+  fiyat_saatlik_min, fiyat_saatlik_max, fiyat_notu, multisport (bool)
+  telefon, web, calisma_saatleri, aydinlatma (bool)
+  isletmeci: belediye | universite | kulup | federasyon | otel | site
+  kaynaklar[] (url + tarih), dogrulama_durumu, son_dogrulama
+  osm_id, google_place_id
+
+Yorum (review)
+  id, tesis_id, takma_ad, puan (1-5), metin, olusturma, ip_hash, durum (onay bekliyor|yayında|gizli)
+
+Duzeltme (suggestion)
+  id, tesis_id, alan, yeni_deger, kanit_url, durum</pre>
+
+    <h2>4. Teknik mimari önerisi</h2>
+    <table>
+      <tr><th>Katman</th><th>Öneri</th><th>Neden</th></tr>
+      <tr><td>Ön yüz</td><td>PWA (React/Vite veya Next.js) + Leaflet ya da MapLibre GL</td><td>Mobilde uygulama gibi çalışır, mağazaya gerek yok. Harita katmanı ücretsiz.</td></tr>
+      <tr><td>Harita karoları</td><td>MapTiler / Stadia (ücretsiz kota) veya kendi sunucumuz</td><td>tile.openstreetmap.org yoğun ticari kullanıma uygun değil.</td></tr>
+      <tr><td>Arka uç ve veritabanı</td><td>Supabase (Postgres + PostGIS + Edge Functions)</td><td>Yakınlık sorgusu (<code>ST_DWithin</code>), yorumlar ve moderasyon. Üyelik eklendiğinde Auth hazır.</td></tr>
+      <tr><td>Veri toplama</td><td>Gece çalışan bir işlem: Overpass → normalize → kümele → "inceleme bekliyor" kuyruğu</td><td>Yeni kortlar otomatik yakalanır, elle doğrulanmış alanlar ezilmez.</td></tr>
+      <tr><td>Yol tarifi</td><td>Google Maps deep link + OSRM / OpenRouteService rota çizimi</td><td>Ücretsiz. Navigasyonun asıl işini kullanıcının harita uygulaması yapar.</td></tr>
+      <tr><td>Ses</td><td>Web Speech API (tr-TR) + Web Audio sentez → ileride stüdyoda kaydedilmiş bir "Temiiiis!" mp3</td><td>Demo dosya gerektirmez. Üründe kayıtlı ses daha eğlenceli ve tutarlı olur.</td></tr>
+    </table>
+
+    <h2>5. Yol haritası</h2>
+    <div class="grid3">
+      <div class="card"><span class="phase">Faz 0 · 1 hafta</span><h3>Veri toplama</h3>
+        <ul><li>Overpass ile toplu çekim ve temizlik</li><li>MultiSport, TTF ve üniversite listelerinin birleştirilmesi</li><li>Her tesisin aranarak ücret ve açık/kapalı bilgisinin doğrulanması</li><li>Belediyelere bilgi edinme başvurusu</li></ul></div>
+      <div class="card"><span class="phase">Faz 1 · 2–3 hafta</span><h3>MVP</h3>
+        <ul><li>Harita, liste ve filtreler</li><li>En yakın kort, rota ve yol tarifi</li><li>Detay sayfası ve ücret alanı</li><li>"Temiiiis!" sesi 🎾</li></ul></div>
+      <div class="card"><span class="phase">Faz 2 · 2 hafta</span><h3>Topluluk</h3>
+        <ul><li>Üyeliksiz yorum ve puan (sunucu tarafında)</li><li>Spam koruması ve moderasyon paneli</li><li>"Bilgi yanlış" / "Ücreti biliyorum" formları</li></ul></div>
+      <div class="card"><span class="phase">Faz 3 · sonrası</span><h3>Büyüme</h3>
+        <ul><li>Üyelik, favoriler, partner bulma</li><li>Kulüplerle rezervasyon entegrasyonu</li><li>Diğer şehirler (İstanbul, İzmir…)</li></ul></div>
+    </div>
+
+    <h2>6. Riskler</h2>
+    <ul>
+      <li><b>Güncellik:</b> Ücretler sık değişir. Bu yüzden her bilgide "son doğrulama" tarihi gösterilir ve kitle kaynağıyla güncellenir.</li>
+      <li><b>Lisans:</b> OSM verisi kullanılırsa kaynak belirtilmeli (ODbL). Google verisi kalıcı olarak saklanamaz.</li>
+      <li><b>Sahte veya hakaret içeren yorumlar:</b> Üyelik olmadığı için hız sınırı, IP hash'i, captcha ve moderasyon gerekir.</li>
+      <li><b>Özel kortlar:</b> Site ve apartman kortları (<code>access=private</code>) haritada varsayılan olarak gizlenmeli.</li>
+    </ul>
+
+    <h2>7. Araştırmada kullanılan kaynaklar</h2>
+    <ul class="src" style="font-size:13.5px">
+      <li><a href="https://en.wikipedia.org/wiki/TTF_Ankara_Tennis_Training_Center" target="_blank">TTF Ankara Tennis Training Center – Wikipedia</a> · <a href="https://www.24saatgazetesi.com/tenisin-merkezi-baskent-oldu" target="_blank">24 Saat – Tenisin merkezi Başkent oldu</a> · <a href="https://ttf.org.tr/en/news-detail/283" target="_blank">TTF haber</a></li>
+      <li><a href="https://spormd2.metu.edu.tr/en/node/54" target="_blank">ODTÜ Spor Müdürlüğü – Genel bilgi</a></li>
+      <li><a href="https://iso.ankara.edu.tr/?p=16609" target="_blank">Ankara Üniversitesi – Spor tesisleri (Tandoğan kapalı ve açık tenis kortları)</a></li>
+      <li><a href="https://eurovistatrips.com/sports-facilities-ankara-universities/" target="_blank">Ankara üniversitelerindeki spor tesisleri rehberi (üçüncü taraf)</a></li>
+      <li>MultiSport tesis sayfaları: <a href="https://benefitsystems.com.tr/en/facilities/royal-tenis-club" target="_blank">Royal Tenis Club</a>, <a href="https://benefitsystems.com.tr/en/facilities/par-sport-club-tenis" target="_blank">ParSport</a>, <a href="https://benefitsystems.com.tr/en/facilities/asta-tenis/" target="_blank">Asta Tenis</a>, <a href="https://benefitsystems.com.tr/en/facilities/asta-tenis-sheraton/" target="_blank">Asta Tenis Sheraton</a>, <a href="https://benefitsystems.com.tr/en/facilities/tennis-clinic-cayyolu/" target="_blank">Tennis Clinic Çayyolu</a>, <a href="https://benefitsystems.com.tr/en/facilities/tennis-clinic-uemit/" target="_blank">Tennis Clinic Ümitköy</a>, <a href="https://benefitsystems.com.tr/en/facilities/atmaca-tenis-akademisi/" target="_blank">Atmaca</a>, <a href="https://benefitsystems.com.tr/en/facilities/atli-spor-tenis-kul-ue-b-ue/" target="_blank">Atlı Spor</a>, <a href="https://benefitsystems.com.tr/en/facilities/ahal-teke-tenis-kuluebue/" target="_blank">Ahal Teke</a>, <a href="https://benefitsystems.com.tr/en/facilities/mot-mogan-tennis-club/" target="_blank">MOT Mogan</a></li>
+      <li><a href="https://www.politikam.com/ankarada-ust-hakki-karsiligi-insaat-ihalesi" target="_blank">Politika – Lodumlu'da 6 tenis kortu için üst hakkı ihalesi</a></li>
+      <li><a href="https://www.yeniankara.com.tr/ankara/etimesgutta-spor-dolu-bir-yaz-9-farkli-bransta-egitim-173605" target="_blank">Yeni Ankara – Etimesgut yaz spor okulları (TOHM Eryaman)</a></li>
+      <li><a href="https://www.pickleheads.com/courts/tr/ankara/etimesgut/etimesgut-spor-tesisleri" target="_blank">Pickleheads – Etimesgut Spor Tesisleri</a> · <a href="https://www.atilim.edu.tr/en/spor/page/6581/tennis-court-usage-rules" target="_blank">Atılım Ü. – Tenis kortu kullanım kuralları</a></li>
+      <li><a href="https://repository.bilkent.edu.tr/items/fc61be20-93c1-49bf-9e4e-1f0ad8e98450/full" target="_blank">Bilkent – Ankara Tenis Kulübü (1947) çalışması</a></li>
+      <li><a href="https://www.eleman.net/is-rehberi/maaslar-ve-ucretler/istanbul-buyuksehir-belediyesi-ibb-spor-tesisleri-2025-ucret-tarifesi-h13842" target="_blank">İBB spor tesisleri 2026 ücret tarifesi (yalnızca karşılaştırma için)</a></li>
+    </ul>
+  </div>
