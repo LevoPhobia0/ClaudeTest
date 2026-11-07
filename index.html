@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KortBul Ankara · Tenis Kortu Haritası (Demo + Plan)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{
+    --green:#1f7a3a; --green-d:#145a29; --ball:#d7f53b; --clay:#c8643b;
+    --blue:#2563eb; --purple:#8b5cf6; --gray:#6b7280; --bg:#f5f7f2; --card:#fff;
+    --text:#1b2420; --muted:#5d6b63; --line:#e3e8e1; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--bg)}
+  header{display:flex;align-items:center;gap:16px;padding:10px 18px;background:linear-gradient(90deg,var(--green-d),var(--green));color:#fff;flex-wrap:wrap}
+  .logo{font-weight:800;font-size:20px;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+  .logo .b{width:26px;height:26px;border-radius:50%;background:var(--ball);box-shadow:inset -4px -3px 0 rgba(0,0,0,.12);position:relative}
+  .logo .b:after{content:"";position:absolute;inset:3px;border:2px solid #fff;border-left-color:transparent;border-right-color:transparent;border-radius:50%}
+  .tabs{display:flex;gap:6px;margin-left:auto}
+  .tab{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600;font-size:14px}
+  .tab.active{background:var(--ball);color:#1b2420;border-color:var(--ball)}
+  .iconbtn{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:7px 11px;cursor:pointer;font-size:15px}
+  .demo-badge{font-size:11px;background:rgba(0,0,0,.25);padding:3px 8px;border-radius:999px}
+
+  /* ---------- HARİTA SEKME ---------- */
+  #view-map{display:grid;grid-template-columns:360px 1fr;height:calc(100% - 56px)}
+  aside{background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .controls{padding:12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+  .controls input[type=search]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:12.5px;cursor:pointer;user-select:none}
+  .chip.on{background:var(--green);color:#fff;border-color:var(--green)}
+  .btn{border:0;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;font-size:14px}
+  .btn-primary{background:var(--green);color:#fff}
+  .btn-ball{background:var(--ball);color:#1b2420}
+  .btn-ghost{background:#eef3ec;color:var(--text)}
+  .row{display:flex;gap:8px}
+  .row .btn{flex:1}
+  .stat{font-size:12px;color:var(--muted)}
+  #list{overflow:auto;flex:1;padding:8px}
+  .item{padding:10px 11px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:.15s;background:#fff}
+  .item:hover{border-color:var(--green);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.05)}
+  .item.sel{border-color:var(--green);box-shadow:0 0 0 2px rgba(31,122,58,.2)}
+  .item h4{margin:0 0 4px;font-size:14.5px}
+  .meta{display:flex;flex-wrap:wrap;gap:5px;font-size:11.5px}
+  .tag{padding:2px 7px;border-radius:999px;background:#eef3ec;color:#2b3a31;white-space:nowrap}
+  .t-acik{background:#dcfce7;color:#14532d}.t-kapali{background:#dbeafe;color:#1e3a8a}.t-karma{background:#ede9fe;color:#4c1d95}.t-bilinmiyor{background:#f3f4f6;color:#374151}
+  .f-ucretsiz{background:#d1fae5;color:#065f46}.f-ucretli{background:#fee2e2;color:#7f1d1d}.f-uyelik{background:#fef3c7;color:#78350f}.f-bilinmiyor{background:#f3f4f6;color:#374151}
+  .warn{background:#fff7ed;color:#9a3412}
+  .dist{float:right;font-weight:700;color:var(--green);font-size:12.5px}
+  #mapwrap{position:relative;min-height:0}
+  #map{position:absolute;inset:0}
+  .legend{position:absolute;bottom:18px;left:12px;z-index:500;background:#fff;border-radius:12px;padding:9px 11px;font-size:12px;box-shadow:0 2px 12px rgba(0,0,0,.15);line-height:1.7}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+  .pin{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .15s}
+  .pin:hover{transform:scale(1.15)}
+  .pin.plan{border-style:dashed;opacity:.8}
+  .pin-osm{width:14px;height:14px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .me{width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px rgba(37,99,235,.25)}
+
+  /* Detay paneli */
+  #detail{position:absolute;top:12px;right:12px;bottom:12px;width:380px;max-width:calc(100% - 24px);background:#fff;z-index:600;border-radius:var(--radius);box-shadow:0 8px 30px rgba(0,0,0,.2);display:none;flex-direction:column;overflow:hidden}
+  #detail.open{display:flex;animation:slide .25s ease}
+  @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+  .d-head{padding:14px 16px;background:linear-gradient(135deg,var(--green),#2f9e52);color:#fff;position:relative}
+  .d-head h3{margin:0 30px 6px 0;font-size:18px}
+  .d-head .close{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.2);border:0;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px}
+  .d-body{padding:14px 16px;overflow:auto;flex:1}
+  .kv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13.5px;margin-bottom:12px}
+  .kv b{color:var(--muted);font-weight:600}
+  .price{background:#f7fee7;border:1px dashed #a3e635;border-radius:10px;padding:9px 11px;font-size:13.5px;margin-bottom:12px}
+  .route-info{background:#eff6ff;border-radius:10px;padding:9px 11px;font-size:13.5px;margin:10px 0;display:none}
+  .section-t{font-weight:800;margin:16px 0 8px;font-size:14.5px}
+  .stars{display:flex;gap:2px;font-size:22px;cursor:pointer}
+  .stars span{color:#d1d5db}.stars span.on{color:#f59e0b}
+  textarea,.d-body input[type=text]{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:13.5px}
+  textarea{min-height:70px;resize:vertical}
+  .comment{border-top:1px solid var(--line);padding:9px 0;font-size:13.5px}
+  .comment .who{font-weight:700}.comment .when{color:var(--muted);font-size:11.5px;margin-left:6px}
+  .src{font-size:12px;color:var(--muted)}
+  .src a{color:var(--green)}
+
+  /* TEMİİİS efekti */
+  #temis{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.3);z-index:9999;pointer-events:none;font-weight:900;font-size:clamp(40px,9vw,110px);color:var(--ball);
+    -webkit-text-stroke:3px var(--green-d);text-shadow:0 6px 0 var(--green-d),0 12px 30px rgba(0,0,0,.35);opacity:0;white-space:nowrap;font-style:italic}
+  #temis.go{animation:temis 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+  @keyframes temis{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-12deg)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(4deg)}35%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1.05)}}
+  .ballfly{position:fixed;z-index:9998;width:34px;height:34px;border-radius:50%;background:var(--ball);box-shadow:inset -6px -5px 0 rgba(0,0,0,.15);pointer-events:none}
+
+  /* ---------- PLAN SEKME ---------- */
+  #view-plan{display:none;overflow:auto;height:calc(100% - 56px)}
+  .plan{max-width:1000px;margin:0 auto;padding:26px 20px 60px}
+  .plan h1{font-size:28px;margin:0 0 6px}
+  .plan h2{font-size:21px;margin:34px 0 10px;padding-bottom:6px;border-bottom:3px solid var(--ball);display:inline-block}
+  .plan h3{font-size:16px;margin:18px 0 6px}
+  .plan p,.plan li{line-height:1.6;font-size:15px}
+  .callout{background:#fff;border-left:5px solid var(--green);border-radius:10px;padding:14px 16px;margin:14px 0;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+  .callout.warn{border-left-color:#f59e0b;background:#fffbeb;color:inherit}
+  table{border-collapse:collapse;width:100%;background:#fff;border-radius:12px;overflow:hidden;font-size:14px;margin:10px 0}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#eef3ec;font-size:13px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .card{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+  .card h3{margin-top:0}
+  .phase{display:inline-block;background:var(--green);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-bottom:6px}
+  code,pre{background:#1b2420;color:#d7f53b;border-radius:8px;font-size:12.5px}
+  code{padding:1px 6px}
+  pre{padding:12px 14px;overflow:auto;line-height:1.5}
+  .ok{color:#15803d;font-weight:700}.no{color:#b91c1c;font-weight:700}.mid{color:#b45309;font-weight:700}
+
+  @media (max-width:820px){
+    #view-map{grid-template-columns:1fr;grid-template-rows:45% 55%}
+    aside{order:2;border-right:0;border-top:1px solid var(--line)}
+    #mapwrap{order:1}
+    #detail{width:auto;left:12px}
+    .legend{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="b"></span> KortBul Ankara</div>
+  <span class="demo-badge">DEMO · v0.1</span>
+  <div class="tabs">
+    <button class="tab active" data-view="map">🗺️ Harita</button>
+    <button class="tab" data-view="plan">📋 Plan &amp; Araştırma</button>
+    <button class="iconbtn" id="soundBtn" title="Sesi aç/kapat">🔊</button>
+  </div>
+</header>
+
+<!-- ================= HARİTA ================= -->
+<section id="view-map">
+  <aside>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Kort, kulüp veya ilçe ara… (ör. Gölbaşı)">
+      <div class="chips" id="typeChips">
+        <span class="chip on" data-k="tur" data-v="hepsi">Hepsi</span>
+        <span class="chip" data-k="tur" data-v="acik">☀️ Açık</span>
+        <span class="chip" data-k="tur" data-v="kapali">🏠 Kapalı</span>
+        <span class="chip" data-k="tur" data-v="karma">🔀 Açık + kapalı</span>
+      </div>
+      <div class="chips" id="feeChips">
+        <span class="chip on" data-k="ucret" data-v="hepsi">Tüm ücretler</span>
+        <span class="chip" data-k="ucret" data-v="ucretsiz">Ücretsiz</span>
+        <span class="chip" data-k="ucret" data-v="ucretli">Ücretli</span>
+        <span class="chip" data-k="ucret" data-v="uyelik">Üyelik / MultiSport</span>
+        <span class="chip" data-k="ucret" data-v="bilinmiyor">Ücret bilinmiyor</span>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" id="nearBtn">📍 En yakın kort</button>
+        <button class="btn btn-ball" id="osmBtn" title="OpenStreetMap Overpass API'den canlı veri çeker">🌍 OSM'den canlı çek</button>
+      </div>
+      <div class="stat" id="stat"></div>
+    </div>
+    <div id="list"></div>
+  </aside>
+
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div class="legend">
+      <div><i style="background:var(--green)"></i>Açık kort</div>
+      <div><i style="background:var(--blue)"></i>Kapalı kort</div>
+      <div><i style="background:var(--purple)"></i>Açık + kapalı</div>
+      <div><i style="background:var(--gray)"></i>Bilinmiyor / proje</div>
+      <div><i style="background:#f59e0b"></i>OSM canlı verisi</div>
+    </div>
+    <div id="detail"></div>
+  </div>
+</section>
+
+<!-- ================= PLAN ================= -->
+<section id="view-plan">
+  <div class="plan">
+    <h1>🎾 KortBul Ankara: Ürün Planı ve Veri Araştırması</h1>
+    <p class="src">Hazırlanma tarihi: 7 Kasım 2026 · Durum: Keşif + tıklanabilir demo</p>
+
+    <div class="callout">
+      <b>Özet:</b> Ankara'daki tenis kortlarının <b>hepsini</b> tek yerde, güncel ve resmi biçimde listeleyen bir kaynak <b>yok</b>.
+      Belediyelerin, Gençlik ve Spor İl Müdürlüğü'nün ve TTF'nin hiçbirinde ücret ve açık/kapalı bilgisiyle birlikte toplu bir kort listesi bulamadık.
+      Bu yüzden veriyi <b>birden çok kaynaktan birleştireceğiz</b>. Otomatik çekilebilecek en iyi toplu kaynak <b>OpenStreetMap (Overpass API)</b>.
+      Demo sayfasındaki <i>"🌍 OSM'den canlı çek"</i> butonu bunu tarayıcıdan anında yapıyor.
+      Üzerine elle doğrulanmış bir çekirdek liste ekliyoruz: şu an 22 tesis, kaynak linkleriyle.
+    </div>
+
+    <h2>1. Veri kaynakları araştırması</h2>
+    <table>
+      <tr><th>Kaynak</th><th>Ne verir?</th><th>Otomatik çekilebilir mi?</th><th>Açık/kapalı</th><th>Ücret</th><th>Not</th></tr>
+      <tr><td><b>OpenStreetMap / Overpass API</b></td><td>Kort konumları (<code>sport=tennis</code>), isim, <code>covered</code>, <code>fee</code>, <code>access</code>, <code>surface</code>, <code>opening_hours</code></td><td class="ok">Evet, ücretsiz API</td><td class="mid">Kısmen (<code>covered</code> etiketi)</td><td class="mid">Kısmen (<code>fee</code> etiketi)</td><td>ODbL lisansı, kaynak belirtilmeli. Apartman ve site kortları da çıkar, filtrelemek gerekir. En iyi başlangıç noktası.</td></tr>
+      <tr><td><b>Google Places API</b></td><td>İsim, adres, telefon, çalışma saatleri, puan, fotoğraf</td><td class="mid">Evet, ama ücretli ve kotalı</td><td class="no">Hayır</td><td class="no">Hayır</td><td>Kullanım şartları veriyi kalıcı saklamayı kısıtlar. Çalışma saatlerini ve telefonu zenginleştirmek için kullanılabilir.</td></tr>
+      <tr><td><b>MultiSport (benefitsystems.com.tr)</b></td><td>Ankara'daki anlaşmalı tenis kulüpleri ve adresleri</td><td class="mid">Sayfa sayfa (scraping, izin gerekir)</td><td class="mid">Bazen</td><td class="mid">"MultiSport ile X saat" bilgisi</td><td>Özel kulüp listesi için çok iyi bir kaynak (Royal, ParSport, Asta, Tennis Clinic, MOT Mogan…)</td></tr>
+      <tr><td><b>Türkiye Tenis Federasyonu (ttf.org.tr)</b></td><td>Tescilli kulüpler, TTF Ankara Tenis Eğitim Merkezi</td><td class="no">Hayır (PDF ve haber)</td><td class="mid">Bazen</td><td class="no">Hayır</td><td>Kulüp tescil listesi resmi talep yoluyla istenebilir.</td></tr>
+      <tr><td><b>Üniversiteler</b> (ODTÜ, Bilkent, Ankara Ü., Atılım…)</td><td>Kort sayısı, zemin, rezervasyon</td><td class="no">Elle</td><td class="ok">Çoğunlukla var</td><td class="mid">Bazen tarife yayımlanıyor</td><td>ODTÜ: 13 kort (5 kapalı, 6 açık, 2 açık toprak), online rezervasyon.</td></tr>
+      <tr><td><b>Belediyeler</b> (ABB, Çankaya, Yenimahalle, Etimesgut, Keçiören…)</td><td>Park içi ve tesis kortları, ücretsiz kurslar</td><td class="no">Elle (faaliyet raporu ve haber)</td><td class="mid">Nadiren</td><td class="no">Ankara için tarife bulamadık</td><td>Tarife için resmi bilgi edinme başvurusu (CİMER / BİMER) yapılabilir.</td></tr>
+      <tr><td><b>GSB / Gençlik ve Spor İl Müdürlüğü</b></td><td>TOHM Eryaman vb. tesisler, yaz spor okulları</td><td class="no">Elle</td><td class="mid">Nadiren</td><td class="no">Hayır</td><td>Kayıtlar e-Devlet üzerinden yapılıyor.</td></tr>
+      <tr><td><b>Kitle kaynaklı (kullanıcılar)</b></td><td>Ücret, açık/kapalı, durum, yorum</td><td class="ok">Uygulamanın kendisi</td><td class="ok">Evet</td><td class="ok">Evet</td><td>Uzun vadede en güncel kaynak bu olur ("bu bilgi yanlış" butonu ve moderasyon).</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <b>Dürüstlük notu:</b> Demodaki 22 tesisin konumları <b>yaklaşıktır</b>; tesis adları ve özellikleri aşağıdaki kaynaklardan derlendi.
+      <b>Ücretler:</b> Ankara'daki kortlar için yayımlanmış güncel bir saatlik ücret tarifesi bulamadık. Bu yüzden çoğu kortta "bilinmiyor / tesisle teyit edin" yazıyor.
+      (Fikir vermesi için: İBB'nin 2026 tarifesinde aydınlatmalı tenis kortu saatliği 500 TL. Bu İstanbul fiyatıdır, Ankara için geçerli değildir.)
+      Faz 0'da her tesis aranıp ücret ve açık/kapalı bilgisi doğrulanacak.
+    </div>
+
+    <h3>Overpass sorgusu (otomatik çekim için)</h3>
+<pre>[out:json][timeout:60];
+area["name"="Ankara"]["admin_level"="4"]->.ankara;
+nwr["sport"="tennis"](area.ankara);
+out center tags;</pre>
+    <p>Dönen alanlar: <code>covered=yes</code> → kapalı · <code>fee=yes/no</code> → ücretli/ücretsiz · <code>access=private</code> → site veya kulübe özel · <code>surface=clay/hard/acrylic</code> → zemin.
+    Aynı tesisteki birden çok kort poligonu 50 m yarıçapta kümelenip tek bir "tesis" yapılacak.</p>
+
+    <h2>2. Ürün özellikleri (MVP)</h2>
+    <div class="grid3">
+      <div class="card"><h3>🗺️ Harita ve liste</h3>Tüm kortlar harita üzerinde. Renkler türü gösterir: açık, kapalı, karma. Arama yapılabilir, ilçeye, türe ve ücrete göre filtrelenebilir.</div>
+      <div class="card"><h3>📍 En yakın kort + yol tarifi</h3>Tarayıcının konum izniyle en yakın kortlar sıralanır. Rota çizilir (OSRM), süre ve mesafe gösterilir. Tek tıkla Google Maps / Apple Maps / Yandex'te yol tarifi açılır.</div>
+      <div class="card"><h3>💸 Ücret bilgisi</h3>Biliniyorsa saatlik ücret, gündüz/akşam farkı ve MultiSport geçerliliği. Bilinmiyorsa "bilinmiyor" yazar. Her bilginin kaynağı ve son doğrulama tarihi gösterilir.</div>
+      <div class="card"><h3>💬 Yorum ve puan</h3>Üyelik yok: takma ad, 1–5 yıldız ve yorum yeterli. Spama karşı hız sınırı ve captcha var, moderasyon kuyruğu tutulur.</div>
+      <div class="card"><h3>🎾 "Temiiiis!"</h3>Her korta tıklayınca coşkulu bir "Temiiiis!" sesi, top sesi ve tribün alkışı çalar. Ekranda ayrıca bir animasyon çıkar. Sağ üstteki düğmeden kapatılabilir.</div>
+      <div class="card"><h3>🚩 Bilgi düzeltme</h3>"Bu bilgi yanlış" ve "Ücreti ben biliyorum" formları var. Kitle kaynaklı güncellemeler moderasyondan sonra yayınlanır.</div>
+    </div>
+    <p><b>Kapsam dışı (şimdilik):</b> üyelik ve giriş, rezervasyon ve ödeme, kulüp paneli.</p>
+
+    <h2>3. Veri modeli</h2>
+<pre>Tesis (court_facility)
+  id, ad, ilce, adres, konum (PostGIS POINT)
+  tur: acik | kapali | karma | bilinmiyor
+  kort_sayisi, zemin: toprak | sert | cim | karma
+  ucret_turu: ucretsiz | ucretli | uyelik | bilinmiyor
+  fiyat_saatlik_min, fiyat_saatlik_max, fiyat_notu, multisport (bool)
+  telefon, web, calisma_saatleri, aydinlatma (bool)
+  isletmeci: belediye | universite | kulup | federasyon | otel | site
+  kaynaklar[] (url + tarih), dogrulama_durumu, son_dogrulama
+  osm_id, google_place_id
+
+Yorum (review)
+  id, tesis_id, takma_ad, puan (1-5), metin, olusturma, ip_hash, durum (onay bekliyor|yayında|gizli)
+
+Duzeltme (suggestion)
+  id, tesis_id, alan, yeni_deger, kanit_url, durum</pre>
+
+    <h2>4. Teknik mimari önerisi</h2>
+    <table>
+      <tr><th>Katman</th><th>Öneri</th><th>Neden</th></tr>
+      <tr><td>Ön yüz</td><td>PWA (React/Vite veya Next.js) + Leaflet ya da MapLibre GL</td><td>Mobilde uygulama gibi çalışır, mağazaya gerek yok. Harita katmanı ücretsiz.</td></tr>
+      <tr><td>Harita karoları</td><td>MapTiler / Stadia (ücretsiz kota) veya kendi sunucumuz</td><td>tile.openstreetmap.org yoğun ticari kullanıma uygun değil.</td></tr>
+      <tr><td>Arka uç ve veritabanı</td><td>Supabase (Postgres + PostGIS + Edge Functions)</td><td>Yakınlık sorgusu (<code>ST_DWithin</code>), yorumlar ve moderasyon. Üyelik eklendiğinde Auth hazır.</td></tr>
+      <tr><td>Veri toplama</td><td>Gece çalışan bir işlem: Overpass → normalize → kümele → "inceleme bekliyor" kuyruğu</td><td>Yeni kortlar otomatik yakalanır, elle doğrulanmış alanlar ezilmez.</td></tr>
+      <tr><td>Yol tarifi</td><td>Google Maps deep link + OSRM / OpenRouteService rota çizimi</td><td>Ücretsiz. Navigasyonun asıl işini kullanıcının harita uygulaması yapar.</td></tr>
+      <tr><td>Ses</td><td>Web Speech API (tr-TR) + Web Audio sentez → ileride stüdyoda kaydedilmiş bir "Temiiiis!" mp3</td><td>Demo dosya gerektirmez. Üründe kayıtlı ses daha eğlenceli ve tutarlı olur.</td></tr>
+    </table>
+
+    <h2>5. Yol haritası</h2>
+    <div class="grid3">
+      <div class="card"><span class="phase">Faz 0 · 1 hafta</span><h3>Veri toplama</h3>
+        <ul><li>Overpass ile toplu çekim ve temizlik</li><li>MultiSport, TTF ve üniversite listelerinin birleştirilmesi</li><li>Her tesisin aranarak ücret ve açık/kapalı bilgisinin doğrulanması</li><li>Belediyelere bilgi edinme başvurusu</li></ul></div>
+      <div class="card"><span class="phase">Faz 1 · 2–3 hafta</span><h3>MVP</h3>
+        <ul><li>Harita, liste ve filtreler</li><li>En yakın kort, rota ve yol tarifi</li><li>Detay sayfası ve ücret alanı</li><li>"Temiiiis!" sesi 🎾</li></ul></div>
+      <div class="card"><span class="phase">Faz 2 · 2 hafta</span><h3>Topluluk</h3>
+        <ul><li>Üyeliksiz yorum ve puan (sunucu tarafında)</li><li>Spam koruması ve moderasyon paneli</li><li>"Bilgi yanlış" / "Ücreti biliyorum" formları</li></ul></div>
+      <div class="card"><span class="phase">Faz 3 · sonrası</span><h3>Büyüme</h3>
+        <ul><li>Üyelik, favoriler, partner bulma</li><li>Kulüplerle rezervasyon entegrasyonu</li><li>Diğer şehirler (İstanbul, İzmir…)</li></ul></div>
+    </div>
+
+    <h2>6. Riskler</h2>
+    <ul>
+      <li><b>Güncellik:</b> Ücretler sık değişir. Bu yüzden her bilgide "son doğrulama" tarihi gösterilir ve kitle kaynağıyla güncellenir.</li>
+      <li><b>Lisans:</b> OSM verisi kullanılırsa kaynak belirtilmeli (ODbL). Google verisi kalıcı olarak saklanamaz.</li>
+      <li><b>Sahte veya hakaret içeren yorumlar:</b> Üyelik olmadığı için hız sınırı, IP hash'i, captcha ve moderasyon gerekir.</li>
+      <li><b>Özel kortlar:</b> Site ve apartman kortları (<code>access=private</code>) haritada varsayılan olarak gizlenmeli.</li>
+    </ul>
+
+    <h2>7. Araştırmada kullanılan kaynaklar</h2>
+    <ul class="src" style="font-size:13.5px">
+      <li><a href="https://en.wikipedia.org/wiki/TTF_Ankara_Tennis_Training_Center" target="_blank">TTF Ankara Tennis Training Center – Wikipedia</a> · <a href="https://www.24saatgazetesi.com/tenisin-merkezi-baskent-oldu" target="_blank">24 Saat – Tenisin merkezi Başkent oldu</a> · <a href="https://ttf.org.tr/en/news-detail/283" target="_blank">TTF haber</a></li>
+      <li><a href="https://spormd2.metu.edu.tr/en/node/54" target="_blank">ODTÜ Spor Müdürlüğü – Genel bilgi</a></li>
+      <li><a href="https://iso.ankara.edu.tr/?p=16609" target="_blank">Ankara Üniversitesi – Spor tesisleri (Tandoğan kapalı ve açık tenis kortları)</a></li>
+      <li><a href="https://eurovistatrips.com/sports-facilities-ankara-universities/" target="_blank">Ankara üniversitelerindeki spor tesisleri rehberi (üçüncü taraf)</a></li>
+      <li>MultiSport tesis sayfaları: <a href="https://benefitsystems.com.tr/en/facilities/royal-tenis-club" target="_blank">Royal Tenis Club</a>, <a href="https://benefitsystems.com.tr/en/facilities/par-sport-club-tenis" target="_blank">ParSport</a>, <a href="https://benefitsystems.com.tr/en/facilities/asta-tenis/" target="_blank">Asta Tenis</a>, <a href="https://benefitsystems.com.tr/en/facilities/asta-tenis-sheraton/" target="_blank">Asta Tenis Sheraton</a>, <a href="https://benefitsystems.com.tr/en/facilities/tennis-clinic-cayyolu/" target="_blank">Tennis Clinic Çayyolu</a>, <a href="https://benefitsystems.com.tr/en/facilities/tennis-clinic-uemit/" target="_blank">Tennis Clinic Ümitköy</a>, <a href="https://benefitsystems.com.tr/en/facilities/atmaca-tenis-akademisi/" target="_blank">Atmaca</a>, <a href="https://benefitsystems.com.tr/en/facilities/atli-spor-tenis-kul-ue-b-ue/" target="_blank">Atlı Spor</a>, <a href="https://benefitsystems.com.tr/en/facilities/ahal-teke-tenis-kuluebue/" target="_blank">Ahal Teke</a>, <a href="https://benefitsystems.com.tr/en/facilities/mot-mogan-tennis-club/" target="_blank">MOT Mogan</a></li>
+      <li><a href="https://www.politikam.com/ankarada-ust-hakki-karsiligi-insaat-ihalesi" target="_blank">Politika – Lodumlu'da 6 tenis kortu için üst hakkı ihalesi</a></li>
+      <li><a href="https://www.yeniankara.com.tr/ankara/etimesgutta-spor-dolu-bir-yaz-9-farkli-bransta-egitim-173605" target="_blank">Yeni Ankara – Etimesgut yaz spor okulları (TOHM Eryaman)</a></li>
+      <li><a href="https://www.pickleheads.com/courts/tr/ankara/etimesgut/etimesgut-spor-tesisleri" target="_blank">Pickleheads – Etimesgut Spor Tesisleri</a> · <a href="https://www.atilim.edu.tr/en/spor/page/6581/tennis-court-usage-rules" target="_blank">Atılım Ü. – Tenis kortu kullanım kuralları</a></li>
+      <li><a href="https://repository.bilkent.edu.tr/items/fc61be20-93c1-49bf-9e4e-1f0ad8e98450/full" target="_blank">Bilkent – Ankara Tenis Kulübü (1947) çalışması</a></li>
+      <li><a href="https://www.eleman.net/is-rehberi/maaslar-ve-ucretler/istanbul-buyuksehir-belediyesi-ibb-spor-tesisleri-2025-ucret-tarifesi-h13842" target="_blank">İBB spor tesisleri 2026 ücret tarifesi (yalnızca karşılaştırma için)</a></li>
+    </ul>
+  </div>
+</section>
+
+<div id="temis">TEMİİİİS! 🎾</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* =========================================================
+   ÇEKİRDEK VERİ — konumlar YAKLAŞIKTIR, Faz 0'da doğrulanacak
+   ========================================================= */
+const COURTS = [
+  {id:"ttf",ad:"TTF Ankara Tenis Eğitim Merkezi",ilce:"Yenimahalle",lat:39.9540,lng:32.7905,tur:"acik",ucret:"bilinmiyor",
+   fiyat:"Yayımlanmış kort kiralama ücreti bulunamadı. Tesisle iletişime geçin.",kort:"12–14 (7 toprak + 6 sert + 3.500 kişilik merkez kort; kaynaklara göre değişiyor)",zemin:"Toprak + sert",
+   isletmeci:"Türkiye Tenis Federasyonu",adres:"Gazi Mah. Ankara Bulvarı No:12/6, 06560 Yenimahalle",tel:"+90 312 309 77 70",
+   not:"Ağustos 2025'te açıldı. Kapalı kort olup olmadığı doğrulanmadı.",kaynak:"https://en.wikipedia.org/wiki/TTF_Ankara_Tennis_Training_Center",kaynakAdi:"Wikipedia / TTF / 24 Saat"},
+  {id:"odtu",ad:"ODTÜ Spor Merkezi Tenis Kortları",ilce:"Çankaya",lat:39.8905,lng:32.7810,tur:"karma",ucret:"bilinmiyor",
+   fiyat:"Online rezervasyon var. ODTÜ mensubu ve dış kullanıcı tarifeleri tesisten teyit edilmeli.",kort:"13 (5 kapalı, 6 açık, 2 açık toprak)",zemin:"Sert + toprak",
+   isletmeci:"ODTÜ Spor Müdürlüğü",adres:"ODTÜ Kampüsü, Üniversiteler Mah.",tel:"",not:"",kaynak:"https://spormd2.metu.edu.tr/en/node/54",kaynakAdi:"ODTÜ Spor Müdürlüğü"},
+  {id:"tandogan",ad:"Ankara Üniversitesi Tandoğan Tenis Kortları",ilce:"Yenimahalle",lat:39.9372,lng:32.8300,tur:"karma",ucret:"bilinmiyor",
+   fiyat:"Bilinmiyor",kort:"Kapalı + açık kortlar (sayı doğrulanmadı)",zemin:"—",isletmeci:"Ankara Üniversitesi",adres:"Tandoğan Kampüsü",tel:"",
+   not:"Üniversite sayfasında 'Tandoğan Kapalı ve Açık Tenis Kortları' olarak geçiyor.",kaynak:"https://iso.ankara.edu.tr/?p=16609",kaynakAdi:"Ankara Üniversitesi"},
+  {id:"bilkent",ad:"Bilkent Üniversitesi Tenis Kortları",ilce:"Çankaya",lat:39.8695,lng:32.7485,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Dışarıdan kullanım için üyelik seçeneği var (üçüncü taraf rehberine göre)",kort:"6 (doğrulanmadı)",zemin:"—",isletmeci:"Bilkent Üniversitesi",adres:"Bilkent Kampüsü",tel:"",not:"",
+   kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"sportsint",ad:"Sports International Bilkent",ilce:"Çankaya",lat:39.8862,lng:32.7565,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Üyelik bazlı spor kulübü",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Bilkent",tel:"",not:"",kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"atk",ad:"Ankara Tenis Kulübü (ATK)",ilce:"Çankaya",lat:39.9150,lng:32.8530,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Kulüp üyeliği (detay bilinmiyor)",kort:"—",zemin:"—",isletmeci:"Kulüp",adres:"Konum doğrulanacak",tel:"",
+   not:"1947'de resmen açıldı; Ankara'nın en köklü tenis kulübü.",kaynak:"https://repository.bilkent.edu.tr/items/fc61be20-93c1-49bf-9e4e-1f0ad8e98450/full",kaynakAdi:"Bilkent repository"},
+  {id:"asta-sheraton",ad:"Asta Tenis Sheraton",ilce:"Çankaya (Kavaklıdere)",lat:39.9026,lng:32.8606,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli. Diğer ücretler tesisten öğrenilmeli.",kort:"—",zemin:"—",isletmeci:"Asta Tenis",adres:"Sheraton Otel, Kavaklıdere",tel:"",not:"",
+   kaynak:"https://benefitsystems.com.tr/en/facilities/asta-tenis-sheraton/",kaynakAdi:"MultiSport"},
+  {id:"asta-ahlatlibel",ad:"Asta Tenis Ahlatlıbel",ilce:"Çankaya",lat:39.8545,lng:32.8165,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Asta Tenis",adres:"Ahlatlıbel",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/asta-tenis/",kaynakAdi:"MultiSport"},
+  {id:"tc-cayyolu",ad:"Tennis Clinic Çayyolu",ilce:"Çankaya (Çayyolu)",lat:39.8800,lng:32.6900,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Tennis Clinic",adres:"Çayyolu",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/tennis-clinic-cayyolu/",kaynakAdi:"MultiSport"},
+  {id:"tc-umitkoy",ad:"Tennis Clinic Ümitköy",ilce:"Çankaya (Ümitköy)",lat:39.8905,lng:32.7060,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Tennis Clinic",adres:"Ümitköy",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/tennis-clinic-uemit/",kaynakAdi:"MultiSport"},
+  {id:"baselife",ad:"Base Life Club Çayyolu",ilce:"Çankaya (Çayyolu)",lat:39.8725,lng:32.6780,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Üyelik bazlı",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Çayyolu",tel:"",not:"",kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"sehirkulubu",ad:"Ankara Şehir Kulübü",ilce:"Çankaya",lat:39.8985,lng:32.8640,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Kulüp üyeliği",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Çankaya",tel:"",not:"",kaynak:"https://eurovistatrips.com/sports-facilities-ankara-universities/",kaynakAdi:"Üçüncü taraf rehber"},
+  {id:"atli",ad:"Atlı Spor Tenis Kulübü",ilce:"Yenimahalle (Beştepe)",lat:39.9300,lng:32.8020,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Ankara Atlı Spor Kulübü",adres:"Beştepe",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/atli-spor-tenis-kul-ue-b-ue/",kaynakAdi:"MultiSport"},
+  {id:"ahalteke",ad:"Ahal Teke Tenis Kulübü",ilce:"Gölbaşı / İncek",lat:39.8250,lng:32.7600,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Konum doğrulanacak",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/ahal-teke-tenis-kuluebue/",kaynakAdi:"MultiSport"},
+  {id:"atilim",ad:"Atılım Üniversitesi Tenis Kortu",ilce:"Gölbaşı (İncek)",lat:39.8160,lng:32.7225,tur:"bilinmiyor",ucret:"bilinmiyor",
+   fiyat:"Kullanım kuralları yayımlanmış, ücret bilgisi teyit edilmeli",kort:"—",zemin:"—",isletmeci:"Atılım Üniversitesi",adres:"İncek Kampüsü",tel:"",not:"",kaynak:"https://www.atilim.edu.tr/en/spor/page/6581/tennis-court-usage-rules",kaynakAdi:"Atılım Ü."},
+  {id:"royal",ad:"Royal Tenis Club",ilce:"Gölbaşı",lat:39.7930,lng:32.8140,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"Yalnızca MultiSport Plus kartıyla",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Gölbaşı",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/royal-tenis-club",kaynakAdi:"MultiSport"},
+  {id:"parsport",ad:"ParSport Club – Tenis",ilce:"Gölbaşı",lat:39.7870,lng:32.8040,tur:"acik",ucret:"uyelik",
+   fiyat:"MultiSport ile 1 saat açık kort kullanımı",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Gölbaşı",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/par-sport-club-tenis",kaynakAdi:"MultiSport"},
+  {id:"atmaca",ad:"Atmaca Tenis Akademisi",ilce:"Gölbaşı",lat:39.7810,lng:32.8090,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Akademi",adres:"Gölbaşı",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/atmaca-tenis-akademisi/",kaynakAdi:"MultiSport"},
+  {id:"mot",ad:"MOT Mogan Tennis Club",ilce:"Gölbaşı",lat:39.7760,lng:32.7930,tur:"bilinmiyor",ucret:"uyelik",
+   fiyat:"MultiSport kartı geçerli",kort:"—",zemin:"—",isletmeci:"Özel kulüp",adres:"Mogan Gölü çevresi",tel:"",not:"",kaynak:"https://benefitsystems.com.tr/en/facilities/mot-mogan-tennis-club/",kaynakAdi:"MultiSport"},
+  {id:"etimesgut",ad:"Etimesgut Spor Tesisleri",ilce:"Etimesgut",lat:39.9470,lng:32.6700,tur:"bilinmiyor",ucret:"bilinmiyor",
+   fiyat:"Bilinmiyor (belediye tesisi, tarife teyit edilmeli)",kort:"—",zemin:"—",isletmeci:"Belediye",adres:"Etimesgut",tel:"",not:"Pickleheads'te kort olarak listelenmiş.",kaynak:"https://www.pickleheads.com/courts/tr/ankara/etimesgut/etimesgut-spor-tesisleri",kaynakAdi:"Pickleheads"},
+  {id:"tohm",ad:"TOHM Eryaman (GSB)",ilce:"Etimesgut (Eryaman)",lat:39.9765,lng:32.6185,tur:"bilinmiyor",ucret:"bilinmiyor",
+   fiyat:"Yaz spor okulu tenis eğitimleri var, kayıtlar e-Devlet üzerinden",kort:"—",zemin:"—",isletmeci:"Gençlik ve Spor Bakanlığı",adres:"Eryaman",tel:"",not:"",kaynak:"https://www.yeniankara.com.tr/ankara/etimesgutta-spor-dolu-bir-yaz-9-farkli-bransta-egitim-173605",kaynakAdi:"Yeni Ankara"},
+  {id:"lodumlu",ad:"Lodumlu Tenis Kortları (PROJE)",ilce:"Çankaya",lat:39.8960,lng:32.7640,tur:"bilinmiyor",ucret:"bilinmiyor",durum:"planlanan",
+   fiyat:"Henüz açılmadı",kort:"6 (uluslararası standart, planlanan)",zemin:"—",isletmeci:"ABB – üst hakkı karşılığı",adres:"Lodumlu Mah.",tel:"",
+   not:"İhale haberine göre planlanan bir tesis; inşaat durumu doğrulanmadı.",kaynak:"https://www.politikam.com/ankarada-ust-hakki-karsiligi-insaat-ihalesi",kaynakAdi:"Politika Gazetesi"},
+];
+
+const TUR = {acik:["☀️ Açık","t-acik","#1f7a3a"],kapali:["🏠 Kapalı","t-kapali","#2563eb"],karma:["🔀 Açık + kapalı","t-karma","#8b5cf6"],bilinmiyor:["❔ Tür bilinmiyor","t-bilinmiyor","#6b7280"]};
+const UCRET = {ucretsiz:["Ücretsiz","f-ucretsiz"],ucretli:["Ücretli","f-ucretli"],uyelik:["Üyelik / MultiSport","f-uyelik"],bilinmiyor:["Ücret bilinmiyor","f-bilinmiyor"]};
+const KIZILAY = [39.9208, 32.8541];
+
+/* ---------- Durum ---------- */
+const state = {tur:"hepsi", ucret:"hepsi", q:"", me:null, selected:null, osm:[]};
+let soundOn = true;
+
+/* ---------- Harita ---------- */
+const map = L.map("map",{zoomControl:true}).setView([39.89,32.78],11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; OpenStreetMap katkıcıları'}).addTo(map);
+const markers = {}; let routeLayer=null, meMarker=null; const osmLayer = L.layerGroup().addTo(map);
+
+function pinIcon(c){
+  const color = TUR[c.tur][2];
+  return L.divIcon({className:"",html:`<div class="pin ${c.durum==="planlanan"?"plan":""}" style="background:${c.durum==="planlanan"?"#9ca3af":color}">🎾</div>`,iconSize:[30,30],iconAnchor:[15,15]});
+}
+COURTS.forEach(c=>{
+  markers[c.id] = L.marker([c.lat,c.lng],{icon:pinIcon(c),title:c.ad}).addTo(map).on("click",()=>select(c,true));
+});
+
+/* ---------- Yardımcılar ---------- */
+const $ = s=>document.querySelector(s);
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function haversine(a,b){const R=6371,toR=x=>x*Math.PI/180;const dLa=toR(b[0]-a[0]),dLo=toR(b[1]-a[1]);
+  const h=Math.sin(dLa/2)**2+Math.cos(toR(a[0]))*Math.cos(toR(b[0]))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function fmtKm(k){return k<1?Math.round(k*1000)+" m":k.toFixed(1)+" km"}
+function allCourts(){return COURTS.concat(state.osm)}
+
+/* ---------- Liste + filtre ---------- */
+function filtered(){
+  const q = state.q.toLocaleLowerCase("tr");
+  let arr = allCourts().filter(c=>
+    (state.tur==="hepsi"||c.tur===state.tur) &&
+    (state.ucret==="hepsi"||c.ucret===state.ucret) &&
+    (!q || (c.ad+" "+c.ilce+" "+(c.isletmeci||"")).toLocaleLowerCase("tr").includes(q)));
+  if(state.me) arr.sort((a,b)=>haversine(state.me,[a.lat,a.lng])-haversine(state.me,[b.lat,b.lng]));
+  return arr;
+}
+function renderList(){
+  const arr = filtered();
+  const ids = new Set(arr.map(c=>c.id));
+  COURTS.forEach(c=>{ const m=markers[c.id]; ids.has(c.id)?m.addTo(map):m.remove(); });
+  $("#stat").textContent = `${arr.length} tesis gösteriliyor · ${COURTS.length} çekirdek` + (state.osm.length?` + ${state.osm.length} OSM kaydı`:"") + (state.me?" · yakınlığa göre sıralı":"");
+  $("#list").innerHTML = arr.map(c=>{
+    const d = state.me?`<span class="dist">${fmtKm(haversine(state.me,[c.lat,c.lng]))}</span>`:"";
+    const n = commentsOf(c.id); const avg = n.length?(n.reduce((s,x)=>s+x.puan,0)/n.length).toFixed(1):null;
+    return `<div class="item ${state.selected===c.id?"sel":""}" data-id="${esc(c.id)}">${d}<h4>${esc(c.ad)}</h4>
+      <div class="meta"><span class="tag">📍 ${esc(c.ilce)}</span><span class="tag ${TUR[c.tur][1]}">${TUR[c.tur][0]}</span>
+      <span class="tag ${UCRET[c.ucret][1]}">${UCRET[c.ucret][0]}</span>
+      ${c.durum==="planlanan"?'<span class="tag warn">🚧 Planlanan</span>':""}
+      ${c.osm?'<span class="tag" style="background:#fef3c7">OSM</span>':""}
+      ${avg?`<span class="tag">⭐ ${avg} (${n.length})</span>`:""}</div></div>`;
+  }).join("") || `<p class="stat" style="padding:10px">Bu filtrelerle kort bulunamadı. Çekirdek listede ücreti doğrulanmış kort henüz yok; "🌍 OSM'den canlı çek" ile <code>fee</code> etiketli kortları ekleyebilirsin.</p>`;
+}
+$("#list").addEventListener("click",e=>{const it=e.target.closest(".item");if(!it)return;const c=allCourts().find(x=>x.id===it.dataset.id);if(c)select(c,true);});
+$("#q").addEventListener("input",e=>{state.q=e.target.value;renderList();});
+document.querySelectorAll(".chips").forEach(g=>g.addEventListener("click",e=>{
+  const ch=e.target.closest(".chip");if(!ch)return;g.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));ch.classList.add("on");
+  state[ch.dataset.k]=ch.dataset.v;renderList();
+}));
+
+/* ---------- Detay ---------- */
+function select(c, fromUser){
+  state.selected=c.id;
+  if(fromUser) temis();
+  const z=Math.max(map.getZoom(),14), off=innerWidth>820?195:0;
+  map.flyTo(map.unproject(map.project([c.lat,c.lng],z).add([off,0]),z),z,{duration:.6});
+  renderList(); renderDetail(c);
+}
+function renderDetail(c){
+  const d=$("#detail");
+  const dist = state.me?` · Sana ${fmtKm(haversine(state.me,[c.lat,c.lng]))} uzaklıkta`:"";
+  d.innerHTML = `
+   <div class="d-head"><button class="close" aria-label="Kapat">✕</button>
+     <h3>${esc(c.ad)}</h3>
+     <div class="meta"><span class="tag ${TUR[c.tur][1]}">${TUR[c.tur][0]}</span><span class="tag ${UCRET[c.ucret][1]}">${UCRET[c.ucret][0]}</span>
+     ${c.durum==="planlanan"?'<span class="tag warn">🚧 Planlanan</span>':""}</div>
+     <div style="font-size:12.5px;margin-top:6px;opacity:.9">📍 ${esc(c.ilce)}${dist}</div>
+   </div>
+   <div class="d-body">
+     <div class="price">💸 <b>Ücret:</b> ${esc(c.fiyat||"Bilinmiyor")}</div>
+     <div class="kv">
+       <b>Kort sayısı</b><span>${esc(c.kort||"—")}</span>
+       <b>Zemin</b><span>${esc(c.zemin||"—")}</span>
+       <b>İşletmeci</b><span>${esc(c.isletmeci||"—")}</span>
+       <b>Adres</b><span>${esc(c.adres||"—")}</span>
+       ${c.tel?`<b>Telefon</b><span><a href="tel:${esc(c.tel.replace(/\s/g,""))}">${esc(c.tel)}</a></span>`:""}
+       ${c.not?`<b>Not</b><span>${esc(c.not)}</span>`:""}
+     </div>
+     <div class="row">
+       <button class="btn btn-primary" id="routeBtn">🧭 Yol tarifi al</button>
+       <a class="btn btn-ghost" id="gmaps" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">Google Maps ↗</a>
+     </div>
+     <div class="route-info" id="routeInfo"></div>
+     <p class="src">Kaynak: ${c.kaynak?`<a href="${esc(c.kaynak)}" target="_blank" rel="noopener">${esc(c.kaynakAdi||"link")}</a>`:esc(c.kaynakAdi||"—")} · ⚠️ Konum yaklaşık, bilgiler doğrulanacak</p>
+
+     <div class="section-t">💬 Yorumlar ve puan</div>
+     <div class="stars" id="stars">${[1,2,3,4,5].map(i=>`<span data-v="${i}">★</span>`).join("")}</div>
+     <input type="text" id="nick" placeholder="Takma adın (üyelik gerekmez)" maxlength="30" style="margin:6px 0">
+     <textarea id="ctext" placeholder="Kort nasıldı? Zemin, ışıklandırma, ücret, kalabalık…" maxlength="500"></textarea>
+     <button class="btn btn-ball" id="csend" style="margin-top:6px;width:100%">Yorumu gönder 🎾</button>
+     <p class="src">Demo: yorumlar yalnızca bu tarayıcıda (localStorage) saklanır. Üründe sunucuya yazılıp moderasyondan geçecek.</p>
+     <div id="clist"></div>
+   </div>`;
+  d.classList.add("open");
+  d.querySelector(".close").onclick=()=>{d.classList.remove("open");state.selected=null;renderList();};
+  const origin = state.me?`&origin=${state.me[0]},${state.me[1]}`:"";
+  $("#gmaps").href=`https://www.google.com/maps/dir/?api=1${origin}&destination=${c.lat},${c.lng}&travelmode=driving`;
+  $("#routeBtn").onclick=()=>routeTo(c);
+  let rating=0; const stars=[...d.querySelectorAll("#stars span")];
+  const paint=v=>stars.forEach(s=>s.classList.toggle("on",+s.dataset.v<=v));
+  stars.forEach(s=>{s.onmouseenter=()=>paint(+s.dataset.v);s.onclick=()=>{rating=+s.dataset.v;paint(rating);};});
+  $("#stars").onmouseleave=()=>paint(rating);
+  $("#csend").onclick=()=>{
+    const text=$("#ctext").value.trim(), nick=$("#nick").value.trim()||"Anonim tenisçi";
+    if(!rating){alert("Lütfen 1–5 arası puan ver ⭐");return;}
+    if(text.length<3){alert("Biraz daha yaz 🙂");return;}
+    const arr=commentsOf(c.id); arr.unshift({nick,puan:rating,text,t:Date.now()});
+    localStorage.setItem("kortbul-yorum-"+c.id,JSON.stringify(arr)); renderComments(c); renderList(); temis();
+    $("#ctext").value=""; rating=0; paint(0);
+  };
+  renderComments(c);
+}
+function commentsOf(id){try{return JSON.parse(localStorage.getItem("kortbul-yorum-"+id))||[]}catch{return[]}}
+function renderComments(c){
+  const arr=commentsOf(c.id);
+  $("#clist").innerHTML = arr.length? arr.map(x=>`<div class="comment"><span class="who">${esc(x.nick)}</span><span class="when">${new Date(x.t).toLocaleString("tr-TR")}</span>
+    <div style="color:#f59e0b">${"★".repeat(x.puan)}<span style="color:#d1d5db">${"★".repeat(5-x.puan)}</span></div><div>${esc(x.text)}</div></div>`).join("")
+    : `<p class="src">Henüz yorum yok. İlk yorumu sen yaz! 🎾</p>`;
+}
+
+/* ---------- Konum, en yakın kort, rota ---------- */
+function getLocation(){
+  return new Promise(res=>{
+    if(state.me) return res(state.me);
+    const fallback=()=>{state.me=KIZILAY;placeMe(true);res(state.me);};
+    if(!navigator.geolocation) return fallback();
+    navigator.geolocation.getCurrentPosition(p=>{state.me=[p.coords.latitude,p.coords.longitude];placeMe(false);res(state.me);},fallback,{enableHighAccuracy:true,timeout:8000});
+  });
+}
+function placeMe(isFallback){
+  if(meMarker) meMarker.remove();
+  meMarker=L.marker(state.me,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[18,18],iconAnchor:[9,9]})})
+    .addTo(map).bindPopup(isFallback?"📍 Konum izni yok: demo için Kızılay kullanılıyor":"📍 Buradasın");
+  if(isFallback) meMarker.openPopup();
+}
+$("#nearBtn").onclick=async()=>{
+  $("#nearBtn").textContent="📍 Konum alınıyor…";
+  await getLocation(); $("#nearBtn").textContent="📍 En yakın kort";
+  const cand = filtered().filter(c=>c.durum!=="planlanan");
+  if(!cand.length) return;
+  select(cand[0],true); routeTo(cand[0]);
+};
+async function routeTo(c){
+  const me = await getLocation();
+  const info=$("#routeInfo"); info.style.display="block"; info.textContent="🧭 Rota hesaplanıyor…";
+  if(routeLayer) routeLayer.remove();
+  $("#gmaps").href=`https://www.google.com/maps/dir/?api=1&origin=${me[0]},${me[1]}&destination=${c.lat},${c.lng}&travelmode=driving`;
+  try{
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${me[1]},${me[0]};${c.lng},${c.lat}?overview=full&geometries=geojson`);
+    const j = await r.json(); const rt=j.routes[0];
+    routeLayer=L.geoJSON(rt.geometry,{style:{color:"#2563eb",weight:5,opacity:.85}}).addTo(map);
+    info.innerHTML=`🚗 <b>${(rt.distance/1000).toFixed(1)} km</b> · yaklaşık <b>${Math.round(rt.duration/60)} dk</b> (OSRM). Adım adım navigasyon için Google Maps'i aç.`;
+  }catch(err){
+    routeLayer=L.polyline([me,[c.lat,c.lng]],{color:"#2563eb",dashArray:"8 8",weight:4}).addTo(map);
+    info.innerHTML=`📏 Kuş uçuşu <b>${fmtKm(haversine(me,[c.lat,c.lng]))}</b> (rota servisine ulaşılamadı). Google Maps ile yol tarifi al.`;
+  }
+  map.fitBounds(routeLayer.getBounds(),innerWidth>820?{paddingTopLeft:[60,60],paddingBottomRight:[420,60]}:{padding:[40,40]});
+}
+
+/* ---------- OSM'den canlı çekim (Overpass API) ---------- */
+$("#osmBtn").onclick=async()=>{
+  const btn=$("#osmBtn"); btn.disabled=true; btn.textContent="🌍 Çekiliyor…";
+  const query=`[out:json][timeout:60];area["name"="Ankara"]["admin_level"="4"]->.a;nwr["sport"="tennis"](area.a);out center tags;`;
+  try{
+    const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:"data="+encodeURIComponent(query),headers:{"Content-Type":"application/x-www-form-urlencoded"}});
+    const j=await r.json(); osmLayer.clearLayers();
+    state.osm = j.elements.map(e=>{
+      const t=e.tags||{}, lat=e.lat??e.center?.lat, lng=e.lon??e.center?.lon; if(lat==null) return null;
+      const tur = t.covered==="yes"||t.indoor==="yes"||t.building ? "kapali" : (t.covered==="no"?"acik":"bilinmiyor");
+      const ucret = t.fee==="no"?"ucretsiz":t.fee==="yes"?"ucretli":(t.access==="private"||t.access==="members")?"uyelik":"bilinmiyor";
+      return {id:"osm-"+e.type+"-"+e.id,osm:true,ad:t.name||"İsimsiz tenis kortu (OSM)",ilce:t["addr:district"]||t["addr:city"]||"Ankara",lat,lng,tur,ucret,
+        fiyat:t.charge||(t.fee?`OSM fee=${t.fee}`:"Bilinmiyor"),kort:t.courts||"—",zemin:t.surface||"—",isletmeci:t.operator||"—",
+        adres:[t["addr:street"],t["addr:housenumber"]].filter(Boolean).join(" ")||"—",tel:t.phone||"",not:t.access?`Erişim: ${t.access}`:"",
+        kaynak:`https://www.openstreetmap.org/${e.type}/${e.id}`,kaynakAdi:"OpenStreetMap"};
+    }).filter(Boolean);
+    state.osm.forEach(c=>L.marker([c.lat,c.lng],{icon:L.divIcon({className:"",html:'<div class="pin-osm"></div>',iconSize:[14,14],iconAnchor:[7,7]}),title:c.ad})
+      .addTo(osmLayer).on("click",()=>select(c,true)));
+    btn.textContent=`🌍 OSM: ${state.osm.length} kort`;
+  }catch(err){ btn.textContent="🌍 OSM'e ulaşılamadı, tekrar dene"; btn.disabled=false; console.error(err); return; }
+  renderList();
+};
+
+/* =========================================================
+   🎾 TEMİİİİS! — konuşma sentezi + top sesi + tribün alkışı
+   ========================================================= */
+let actx=null;
+function ctx(){ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume(); return actx; }
+function ballHit(t0){
+  const a=ctx(), o=a.createOscillator(), g=a.createGain();
+  o.type="sine"; o.frequency.setValueAtTime(320,t0); o.frequency.exponentialRampToValueAtTime(70,t0+.12);
+  g.gain.setValueAtTime(.9,t0); g.gain.exponentialRampToValueAtTime(.001,t0+.15);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0+.16);
+}
+function noiseBuf(sec){const a=ctx(),b=a.createBuffer(1,a.sampleRate*sec,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+function crowd(t0){
+  const a=ctx(); const src=a.createBufferSource(); src.buffer=noiseBuf(2.2);
+  const bp=a.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1100; bp.Q.value=.6;
+  const g=a.createGain(); g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(.35,t0+.35); g.gain.linearRampToValueAtTime(.25,t0+1.2); g.gain.linearRampToValueAtTime(0,t0+2.1);
+  // alkış "tıkırtısı"
+  const lfo=a.createOscillator(), lg=a.createGain(); lfo.frequency.value=13; lg.gain.value=.12; lfo.connect(lg).connect(g.gain);
+  src.connect(bp).connect(g).connect(a.destination); src.start(t0); lfo.start(t0); lfo.stop(t0+2.2);
+}
+function synthTemis(t0){ // konuşma sentezi yoksa: "te-miiiiis" benzeri ses
+  const a=ctx(); const out=a.createGain(); out.gain.value=.25; out.connect(a.destination);
+  const f1=a.createBiquadFilter(); f1.type="bandpass"; f1.Q.value=4; const f2=a.createBiquadFilter(); f2.type="bandpass"; f2.Q.value=6;
+  const o=a.createOscillator(); o.type="sawtooth"; const vib=a.createOscillator(), vg=a.createGain(); vib.frequency.value=6; vg.gain.value=12;
+  vib.connect(vg).connect(o.frequency);
+  o.frequency.setValueAtTime(260,t0); o.frequency.setValueAtTime(330,t0+.16); o.frequency.linearRampToValueAtTime(440,t0+1.0);
+  f1.frequency.setValueAtTime(600,t0); f1.frequency.setValueAtTime(300,t0+.16); f2.frequency.setValueAtTime(1800,t0); f2.frequency.setValueAtTime(2700,t0+.16);
+  const g=a.createGain(); g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(1,t0+.03); g.gain.setValueAtTime(1,t0+1.0); g.gain.linearRampToValueAtTime(0,t0+1.1);
+  o.connect(f1).connect(g); o.connect(f2).connect(g); g.connect(out); o.start(t0); vib.start(t0); o.stop(t0+1.15); vib.stop(t0+1.15);
+  const s=a.createBufferSource(); s.buffer=noiseBuf(.35); const hp=a.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=4500;
+  const sg=a.createGain(); sg.gain.setValueAtTime(0,t0+1.05); sg.gain.linearRampToValueAtTime(.6,t0+1.1); sg.gain.linearRampToValueAtTime(0,t0+1.4);
+  s.connect(hp).connect(sg).connect(out); s.start(t0+1.05);
+}
+function speakTemis(){
+  if(!("speechSynthesis" in window)) return false;
+  const u=new SpeechSynthesisUtterance("Temiiiiiiiiis!");
+  u.lang="tr-TR"; u.pitch=1.9; u.rate=.85; u.volume=1;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith("tr"));
+  if(!v) return false; // Türkçe ses yoksa sentezle
+  u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u); return true;
+}
+if("speechSynthesis" in window) speechSynthesis.getVoices();
+function temis(){
+  const el=$("#temis"); el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
+  flyBall();
+  if(!soundOn) return;
+  try{
+    const a=ctx(), t=a.currentTime+.02;
+    ballHit(t); crowd(t+.15);
+    if(!speakTemis()) synthTemis(t+.12);
+  }catch(e){console.warn(e)}
+}
+function flyBall(){
+  const b=document.createElement("div"); b.className="ballfly"; document.body.appendChild(b);
+  const x0=-40,y0=innerHeight*.7, x1=innerWidth+40, peak=innerHeight*.15;
+  const t0=performance.now(), dur=900;
+  (function step(now){const p=Math.min(1,(now-t0)/dur);const x=x0+(x1-x0)*p, y=y0-(4*p*(1-p))*(y0-peak);
+    b.style.transform=`translate(${x}px,${y}px) rotate(${p*720}deg)`; p<1?requestAnimationFrame(step):b.remove();})(t0);
+}
+$("#soundBtn").onclick=()=>{soundOn=!soundOn;$("#soundBtn").textContent=soundOn?"🔊":"🔇"; if(soundOn) temis();};
+
+/* ---------- Sekmeler ---------- */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===t));
+  const v=t.dataset.view; $("#view-map").style.display=v==="map"?"grid":"none"; $("#view-plan").style.display=v==="plan"?"block":"none";
+  if(v==="map") setTimeout(()=>map.invalidateSize(),50);
+});
+
+renderList();
+</script>
+</body>
+</html>
